@@ -3,7 +3,6 @@ import { PineconeStore } from '@langchain/community/vectorstores/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import OpenAI from 'openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-import { Document } from 'langchain/document';
 
 if (!process.env.PINECONE_API_KEY) {
   throw new Error('PINECONE_API_KEY is not set');

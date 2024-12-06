@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Reference } from '@/types/chat';
 import FadeIn from './FadeIn';
 import Image from 'next/image';
@@ -16,12 +16,23 @@ const RightPanel: React.FC<RightPanelProps> = ({
   relatedTopics, 
   onTopicClick 
 }) => {
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    // 세션 스토리지에서 사용자 정보 가져오기
+    const userStr = sessionStorage.getItem('currentUser');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setUserName(user.name || '');
+    }
+  }, []);
+
   if (activeSession === 'home') {
     return (
       <>
         <h3 className="text-2xl font-bold mb-4">
           <FadeIn 
-            text="DeepBlend님" 
+            text={`${userName}님`}
             delay={300}
             className="bg-gradient-to-r from-pink-500 to-violet-500 text-transparent bg-clip-text"
           />

@@ -1,6 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { Home, ChevronLeft, ChevronRight, BookOpen, BrainCircuit, HelpCircle, Archive } from 'lucide-react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+const LogoutButton = dynamic(() => import('./LogoutButton'), {
+  ssr: false
+});
 
 interface SidebarProps {
   isOpen: boolean;
@@ -52,13 +57,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
     <div className={`${isOpen ? 'w-64' : 'w-20'} transition-width duration-300 ease-in-out`}>
       <nav className="h-full bg-[#242424] border-r border-[#2f2f2f] p-4">
         <div className="flex items-center mb-8">
-          <button 
+          <button
             onClick={toggleSidebar} 
             className="p-2 rounded hover:bg-[#2f2f2f] text-gray-400"
           >
             {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
           </button>
-          <button 
+          <button
             onClick={handleLogoClick}
             className="flex items-center justify-start pl-2 cursor-pointer text-gray-200"
             disabled={isUploading}
@@ -83,8 +88,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
           accept=".txt,.pdf,.doc,.docx,.md"
         />
         
-        <nav>
-          <ul className="space-y-2">
+        <nav className="flex flex-col h-[calc(100vh-160px)]">
+          <ul className="space-y-2 flex-grow">
             <li>
               <button onClick={() => setActiveSession('home')} 
                       className="flex items-center space-x-2 p-2 rounded hover:bg-[#2f2f2f] w-full text-left text-gray-300">
@@ -134,6 +139,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
               </button>
             </li>
           </ul>
+
+          {/* 로그아웃 버튼 */}
+          <LogoutButton isOpen={isOpen} />
         </nav>
       </nav>
     </div>

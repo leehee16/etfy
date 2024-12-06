@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Paperclip } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface SearchInputProps {
   onSendMessage: (message: string) => void;
@@ -18,10 +18,6 @@ const SearchInput: React.FC<SearchInputProps> = ({ onSendMessage, placeholder, d
     }
   };
 
-  const handleAttachment = () => {
-    console.log('Attachment button clicked');
-  };
-
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="relative">
@@ -31,20 +27,12 @@ const SearchInput: React.FC<SearchInputProps> = ({ onSendMessage, placeholder, d
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full p-2 pr-20 rounded-lg border border-borderMain dark:border-borderMainDark bg-background dark:bg-backgroundDark text-textMain dark:text-textMainDark focus:outline-none focus:ring-2 focus:ring-super dark:focus:ring-superDark ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full p-3 rounded-lg border border-[#2f2f2f] bg-[#242424] text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#3f3f3f] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
-        <button
-          type="button"
-          onClick={handleAttachment}
-          disabled={disabled}
-          className={`absolute right-10 top-1/2 transform -translate-y-1/2 p-1 text-textOff dark:text-textOffDark hover:text-textMain dark:hover:text-textMainDark ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <Paperclip size={18} />
-        </button>
         <button
           type="submit"
           disabled={disabled || !query.trim()}
-          className={`absolute right-1 top-1/2 transform -translate-y-1/2 p-1 text-textOff dark:text-textOffDark hover:text-textMain dark:hover:text-textMainDark ${(disabled || !query.trim()) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
         >
           <Send size={18} />
         </button>

@@ -13,7 +13,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background to-offset dark:from-backgroundDark dark:to-offsetDark">
+    <div className="flex h-screen bg-[#1f1f1f]">
       <Sidebar 
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 

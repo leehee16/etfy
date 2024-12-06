@@ -33,14 +33,6 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     }
   }, [activeSession]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const cards = [
     { icon: <Book size={24} />, title: "기초공부하기", description: "ETF 투자의 기본 개념을 학습합니다.", greeting: "반가워요! ETF 기초공부를 도와드릴 잇삐에요." },
     { icon: <TrendingUp size={24} />, title: "투자시작하기", description: "실제 ETF 투자를 시작하는 방법을 알아봅니다.", greeting: "안녕하세요! ETF 투자를 시작해볼까요?" },
@@ -52,6 +44,9 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setActiveSession(title);
     const greeting = cards.find(card => card.title === title)?.greeting || '안녕하세요!';
     setMessages([{ role: 'assistant', content: greeting }]);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleSendMessage = async (message: string) => {
@@ -60,28 +55,18 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     const userMessage: Message = { role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
     
-    setSessionMessages(prev => ({
-      ...prev,
-      [activeSession]: [...(prev[activeSession] || []), userMessage]
-    }));
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
 
     setIsLoading(true);
 
     try {
-      const aiMessage: Message = {
+      const thinkingMessage: Message = {
         role: 'assistant',
-        content: '',
-        references: [],
-        relatedTopics: [],
-        nextCards: []
+        content: null
       };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      
-      setSessionMessages(prev => ({
-        ...prev,
-        [activeSession]: [...(prev[activeSession] || []), aiMessage]
-      }));
+      setMessages(prev => [...prev, thinkingMessage]);
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -95,37 +80,27 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
       if (!response.ok) throw new Error('API 응답 오류');
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('스트림을 읽을 수 없습니다');
+      const data = await response.json();
+      
+      const aiMessage: Message = {
+        role: 'assistant',
+        content: data.message,
+        references: data.references || [],
+        relatedTopics: data.relatedTopics || [],
+        nextCards: data.nextCards || []
+      };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      setMessages(prev => prev.map((msg, index) => 
+        index === prev.length - 1 ? aiMessage : msg
+      ));
+      setCurrentReferences(data.references || []);
+      setRelatedTopics(data.relatedTopics || []);
+      
+      setSessionMessages(prev => ({
+        ...prev,
+        [activeSession]: [...prev[activeSession] || [], userMessage, aiMessage]
+      }));
 
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(5));
-            
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              if (lastMessage.role === 'assistant') {
-                lastMessage.content = (lastMessage.content || '') + (data.message || '');
-                lastMessage.references = data.references || lastMessage.references;
-                lastMessage.relatedTopics = data.relatedTopics || lastMessage.relatedTopics;
-                lastMessage.nextCards = data.nextCards || lastMessage.nextCards;
-                
-                if (data.references) setCurrentReferences(data.references);
-                if (data.relatedTopics) setRelatedTopics(data.relatedTopics);
-              }
-              return newMessages;
-            });
-          }
-        }
-      }
     } catch (error) {
       console.error('에러 발생:', error);
       const errorMessage: Message = { 
@@ -136,7 +111,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       
       setSessionMessages(prev => ({
         ...prev,
-        [activeSession]: [...(prev[activeSession] || []), errorMessage]
+        [activeSession]: [...prev[activeSession] || [], userMessage, errorMessage]
       }));
     } finally {
       setIsLoading(false);

@@ -46,10 +46,10 @@ const chatModel = new ChatOpenAI({
 const systemTemplate = `당신은 ETF 전문가이자 ETF교육을 담당하고 있습니다.  
 초보 투자자를 위해 친절하고 이해하기 쉽게 정보를 제공하는 것이 목표입니다.  
 검색된 정보(retrieved context)를 적극적으로 활용하고, 이를 바탕으로 정확하고 신뢰할 수 있는 답변을 작성하세요.  
-다음 JSON 형식을 정확히 따르세요:
+아래 JSON 형식으로 정확히 응답하세요. 중괄호는 한 번만 사용하여 생성세요하
 
 {{
-  "message": "사용자 질문에 대한 상세하고 친절한 답변을 작성합니다. 검색된 정보와 자체 지식을 바탕으로 명확하게 작성하세요. 이모티콘도 넣고 항목별로 나누서 보기 적확하게 작성해주세요.
+  "message": "사용자 질문에 대한 상세하고 친절한 답변을 작성합니다. 검색된 정보와 자체 지식을 바탕으로 명확하게 작성하세요.예시와 같이 응답을 생성하세요.이모티콘을 사용하는 등 잘 읽히도록 구성하세요.
 <예시>
 🪙 ETF란?
 ETF(Exchange Traded Fund)는 **"상장지수펀드"**라는 뜻이에요. 주식시장에 상장되어 있어 주식처럼 사고팔 수 있는 펀드 상품이에요.
@@ -247,19 +247,20 @@ const chain = RunnableSequence.from([
     let cleanedStr = '';
     
     try {
-      cleanedStr = contentStr
-        .replace(/^\s*\{{2,}/, '{')
-        .replace(/\}{2,}\s*$/, '}')
-        .replace(/\{{2,}/g, '{')
-        .replace(/\}{2,}/g, '}')
-        .replace(/\s+/g, ' ')
+      // 모든 이중 중괄호를 단일 중괄호로 변환
+      cleanedStr = contentStr.toString()
+        .replace(/\{\{/g, '{')  // 모든 이중 여는 중괄호를 단일로
+        .replace(/\}\}/g, '}')  // 모든 이중 닫는 중괄호를 단일로
         .trim();
 
-      console.log('정리된 JSON 문자열:', cleanedStr);
-      
-      if (!cleanedStr.startsWith('{') || !cleanedStr.endsWith('}')) {
-        throw new Error('Invalid JSON format');
+      // 첫 번째 { 부터 마지막 } 까지만 추출
+      const match = cleanedStr.match(/\{[\s\S]*\}/);
+      if (!match) {
+        throw new Error('No valid JSON object found');
       }
+      cleanedStr = match[0];
+      
+      console.log('정리된 JSON 문자열:', cleanedStr);
       
       const parsed = JSON.parse(cleanedStr);
       
@@ -267,11 +268,34 @@ const chain = RunnableSequence.from([
         throw new Error('Invalid response structure');
       }
 
+      // 타입 안전성을 위한 인터페이스 추가
+      interface Reference {
+        title: string;
+        description: string;
+        source: string;
+        url: string;
+        imageUrl?: string;
+      }
+
+      interface NextCard {
+        title: string;
+        description: string;
+        type: 'action' | 'question';
+      }
+
       return {
         message: parsed.message,
-        references: Array.isArray(parsed.references) ? parsed.references : [],
+        references: Array.isArray(parsed.references) 
+          ? parsed.references.map((ref: Reference | string) => 
+              typeof ref === 'string' ? { title: ref } : ref
+            )
+          : [],
         relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
-        nextCards: Array.isArray(parsed.nextCards) ? parsed.nextCards : []
+        nextCards: Array.isArray(parsed.nextCards)
+          ? parsed.nextCards.map((card: NextCard | string) =>
+              typeof card === 'string' ? { title: card, type: 'action' } : card
+            )
+          : []
       };
     } catch (error) {
       console.error('응답 파싱 실패:', error);
@@ -327,26 +351,13 @@ export default async function handler(
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  // SSE 설정
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
   try {
     const input = req.body;
+    const response = await chain.invoke(input);
     
-    // 스트리밍 응답을 위한 설정
-    const stream = await chain.stream(input);
-
-    // 청크로 응답 전송
-    for await (const chunk of stream) {
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    }
-
-    res.end();
+    return res.status(200).json(response);
   } catch (error) {
     console.error('API 오류:', error);
-    res.write(`data: ${JSON.stringify({ error: '오류가 발생했습니다' })}\n\n`);
-    res.end();
+    return res.status(500).json({ error: '오류가 발생했습니다' });
   }
 } 

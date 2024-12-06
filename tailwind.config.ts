@@ -55,6 +55,33 @@ const config: Config = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		keyframes: {
+  			fadeIn: {
+  				'0%': { opacity: '0', transform: 'translateY(10px)' },
+  				'100%': { opacity: '1', transform: 'translateY(0)' }
+  			},
+  			slideUp: {
+  				'0%': { opacity: '0', transform: 'translateY(5px)' },
+  				'100%': { opacity: '1', transform: 'translateY(0)' }
+  			},
+        slideContent: {
+          '0%': { 
+            opacity: '0',
+            transform: 'translateX(-10px)',
+            clipPath: 'inset(0 100% 0 0)'
+          },
+          '100%': { 
+            opacity: '1',
+            transform: 'translateX(0)',
+            clipPath: 'inset(0 0 0 0)'
+          }
+        }
+  		},
+  		animation: {
+  			fadeIn: 'fadeIn 0.5s ease-out forwards',
+  			slideUp: 'slideUp 0.3s ease-out forwards',
+        slideContent: 'slideContent 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards'
   		}
   	}
   },

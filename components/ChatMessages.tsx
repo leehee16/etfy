@@ -3,20 +3,52 @@ import ReactMarkdown from 'react-markdown';
 import { Message } from '@/types/chat';
 import { ChartBar, Search } from 'lucide-react';
 
+// 컨텍스트별 스타일 정의
+const contextStyles = {
+  '기초공부하기': {
+    icon: '📚',
+    bgColor: 'bg-[#FFE082]',
+    textColor: 'text-gray-800',
+    label: '기초 학습'
+  },
+  '투자시작하기': {
+    icon: '🎯',
+    bgColor: 'bg-[#81C784]',
+    textColor: 'text-white',
+    label: '투자 실행'
+  },
+  '살펴보기': {
+    icon: '🔍',
+    bgColor: 'bg-[#64B5F6]',
+    textColor: 'text-white',
+    label: 'ETF 탐색'
+  },
+  '분석하기': {
+    icon: '📊',
+    bgColor: 'bg-[#F48FB1]',
+    textColor: 'text-white',
+    label: '포트폴리오 분석'
+  }
+};
+
 interface ChatMessagesProps {
   messages: Message[];
   handleSendMessage: (message: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  context?: string;
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({ 
   messages, 
   handleSendMessage, 
-  messagesEndRef 
+  messagesEndRef,
+  context = '기초공부하기'
 }) => {
   const animatedMessages = useRef(new Set<string>());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
+
+  const style = contextStyles[context as keyof typeof contextStyles] || contextStyles['기초공부하기'];
 
   useEffect(() => {
     // 새로운 메시지가 추가되었고, 그것이 사용자의 메시지일 때만 스크롤
@@ -55,6 +87,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       {messages.map((msg, index) => {
         const msgKey = `${msg.role}-${index}`;
         const shouldAnimate = index === messages.length - 1;
+        const messageStyle = msg.context ? 
+          contextStyles[msg.context as keyof typeof contextStyles] || contextStyles['기초공부하기'] :
+          contextStyles[context as keyof typeof contextStyles] || contextStyles['기초공부하기'];
 
         return (
           <div key={msgKey} className={`flex flex-col space-y-4 ${shouldAnimate ? 'animate-fadeIn' : ''}`}>
@@ -63,14 +98,19 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 className={`max-w-[80%] p-4 rounded-lg transform transition-all duration-300 ease-in-out ${
                   msg.role === 'user'
                     ? 'bg-blue-500 text-white'
-                    : 'bg-[#242424] text-gray-200'
+                    : `${messageStyle.bgColor} ${messageStyle.textColor}`
                 }`}
               >
+                {msg.role === 'assistant' && (
+                  <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+                    <span>{messageStyle.icon}</span>
+                    <span>{messageStyle.label}</span>
+                  </div>
+                )}
                 {msg.content ? (
                   <ReactMarkdown 
                     className="whitespace-pre-wrap break-words prose dark:prose-invert prose-sm max-w-none"
                     components={{
-                      // 코드 블록 스타일링
                       code({ node, inline, className, children, ...props }) {
                         return (
                           <code
@@ -81,7 +121,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           </code>
                         );
                       },
-                      // 링크 스타일링
                       a({ node, className, children, ...props }) {
                         return (
                           <a
@@ -94,7 +133,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           </a>
                         );
                       },
-                      // 일반 텍스트 래핑
                       p({ children }) {
                         return (
                           <div className="overflow-hidden">
@@ -109,12 +147,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     {msg.content}
                   </ReactMarkdown>
                 ) : (
-                  <span className="flex items-center gap-2">
-                    <span>생각중</span>
+                  <span className="flex items-center gap-3">
+                    <span className="text-lg font-medium animate-pulse">
+                      {messageStyle.icon} 생각중
+                    </span>
                     <span className="flex space-x-1">
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-2 h-2 bg-current rounded-full animate-[bounce_0.8s_infinite]" 
+                        style={{ animationDelay: '0ms', opacity: 0.8 }} />
+                      <span className="w-2 h-2 bg-current rounded-full animate-[bounce_0.8s_infinite]" 
+                        style={{ animationDelay: '150ms', opacity: 0.9 }} />
+                      <span className="w-2 h-2 bg-current rounded-full animate-[bounce_0.8s_infinite]" 
+                        style={{ animationDelay: '300ms', opacity: 1 }} />
                     </span>
                   </span>
                 )}

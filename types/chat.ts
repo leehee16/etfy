@@ -7,6 +7,7 @@ export interface NextCard {
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+  context?: string;
   references?: Reference[];
   relatedTopics?: string[];
   nextCards?: NextCard[];

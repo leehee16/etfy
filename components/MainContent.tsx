@@ -1,10 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Book, TrendingUp, Search, BarChartIcon as ChartBar } from 'lucide-react';
 import SearchInput from './SearchInput';
-import Card from './Card';
 import RightPanel from './RightPanel';
 import { Message, Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
+import ChatInput from './ChatInput';
+
+// 컨텍스트별 호버링 스타일 정의
+const cardStyles = {
+  '기초공부하기': {
+    hover: 'hover:bg-[#FFE082] hover:text-gray-800',
+    icon: '📚'
+  },
+  '투자시작하기': {
+    hover: 'hover:bg-[#81C784] hover:text-white',
+    icon: '🎯'
+  },
+  '살펴보기': {
+    hover: 'hover:bg-[#64B5F6] hover:text-white',
+    icon: '🔍'
+  },
+  '분석하기': {
+    hover: 'hover:bg-[#F48FB1] hover:text-white',
+    icon: '📊'
+  }
+};
 
 interface MainContentProps {
   isSidebarOpen: boolean;
@@ -34,10 +54,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   }, [activeSession]);
 
   const cards = [
-    { icon: <Book size={24} />, title: "기초공부하기", description: "ETF 투자의 기본 개념을 학습합니다.", greeting: "반가워요! ETF 기초공부를 도와드릴 잇삐에요." },
-    { icon: <TrendingUp size={24} />, title: "투자시작하기", description: "실제 ETF 투자를 시작하는 방법을 알아봅니다.", greeting: "안녕하세요! ETF 투자를 시작해볼까요?" },
-    { icon: <Search size={24} />, title: "살펴보기", description: "다양한 ETF 상품을 비교 분석합니다.", greeting: "환영합니다! 다양한 ETF 상품을 살펴보겠습니다." },
-    { icon: <ChartBar size={24} />, title: "분석하기", description: "ETF 성과와 시장 동향을 분석합니다.", greeting: "안녕하세요! ETF 성과와 시장 동향을 분석해보겠습니다." },
+    { icon: <Book size={24} />, title: "기초공부하기", description: "ETF 투자의 기본 개념을 학습해요.", greeting: "반가워요! ETF 기초공부를 도와드릴 잇삐에요." },
+    { icon: <TrendingUp size={24} />, title: "투자시작하기", description: "ETF 투자를 시작하는 방법을 알아봐요.", greeting: "안녕하세요! ETF 투자를 시작해볼까요?" },
+    { icon: <Search size={24} />, title: "살펴보기", description: "시장동향을 같이 살펴봐요.", greeting: "환영합니다! 오늘은 무슨 이슈가 있을까요?." },
+    { icon: <ChartBar size={24} />, title: "분석하기", description: "내 자산에서 ETF를 분석해요.", greeting: "안녕하세요! 같이 ETF를 살펴봐요." },
   ];
 
   const handleCardClick = (title: string) => {
@@ -52,7 +72,11 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
     
-    const userMessage: Message = { role: 'user', content: message };
+    const userMessage: Message = { 
+      role: 'user', 
+      content: message,
+      context: activeSession
+    };
     setMessages(prev => [...prev, userMessage]);
     
     setTimeout(() => {
@@ -64,7 +88,8 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     try {
       const thinkingMessage: Message = {
         role: 'assistant',
-        content: null
+        content: null,
+        context: activeSession
       };
       setMessages(prev => [...prev, thinkingMessage]);
 
@@ -87,7 +112,8 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         content: data.message,
         references: data.references || [],
         relatedTopics: data.relatedTopics || [],
-        nextCards: data.nextCards || []
+        nextCards: data.nextCards || [],
+        context: activeSession
       };
 
       setMessages(prev => prev.map((msg, index) => 
@@ -105,7 +131,8 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       console.error('에러 발생:', error);
       const errorMessage: Message = { 
         role: 'assistant', 
-        content: '죄송합니다. 오류가 발생했습니다.' 
+        content: '죄송합니다. 오류가 발생했습니다.',
+        context: activeSession
       };
       setMessages(prev => [...prev, errorMessage]);
       
@@ -172,16 +199,24 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                    {cards.map((card) => (
-                      <Card
-                        key={card.title}
-                        icon={card.icon}
-                        title={card.title}
-                        description={card.description}
-                        color="gray-900"
-                        onClick={() => handleCardClick(card.title)}
-                      />
-                    ))}
+                    {cards.map((card) => {
+                      const style = cardStyles[card.title as keyof typeof cardStyles];
+                      return (
+                        <button
+                          key={card.title}
+                          onClick={() => handleCardClick(card.title)}
+                          className={`p-6 rounded-lg bg-[#242424] text-gray-200
+                            transition-all duration-300 ease-in-out
+                            ${style.hover}`}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-2xl">{style.icon}</span>
+                            <h3 className="text-xl font-bold">{card.title}</h3>
+                          </div>
+                          <p className="text-gray-400">{card.description}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -193,14 +228,16 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     messages={messages} 
                     handleSendMessage={handleSendMessage} 
                     messagesEndRef={messagesEndRef}
+                    context={activeSession}
                   />
                 </div>
                 <div className="flex-shrink-0 p-4 bg-[#1f1f1f]">
                   <div className="max-w-3xl mx-auto">
-                    <SearchInput 
+                    <ChatInput 
                       onSendMessage={handleSendMessage}
                       placeholder="메시지를 입력하세요..."
                       disabled={isLoading}
+                      context={activeSession}
                     />
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import { RunnableSequence } from "@langchain/core/runnables";
 import { initVectorStore } from '@/config/vectordb';
 import { Document } from '@langchain/core/documents';
 import { Message } from '@/types/chat';  // Message 타입 임포트
+import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 // 응답 타입 정의
 interface AIResponse {
@@ -36,12 +37,9 @@ interface ChatRequest {
   references?: string;
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 const chatModel = new ChatOpenAI({
-  modelName: "gpt-3.5-turbo",
+  modelName: "gpt-4o",
   temperature: 0.7,
 });
 
@@ -51,14 +49,47 @@ const systemTemplate = `당신은 ETF 전문가이자 ETF교육을 담당하고 
 다음 JSON 형식을 정확히 따르세요:
 
 {{
-  "message": "사용자 질문에 대한 상세하고 친절한 답변을 작성합니다. 검색된 정보와 자체 지식을 바탕으로 명확하고 간결하게 작성하세요.",
+  "message": "사용자 질문에 대한 상세하고 친절한 답변을 작성합니다. 검색된 정보와 자체 지식을 바탕으로 명확하게 작성하세요. 이모티콘도 넣고 항목별로 나누서 보기 적확하게 작성해주세요.
+<예시>
+🪙 ETF란?
+ETF(Exchange Traded Fund)는 **"상장지수펀드"**라는 뜻이에요. 주식시장에 상장되어 있어 주식처럼 사고팔 수 있는 펀드 상품이에요.
+
+📈 ETF의 특징
+주식처럼 거래:
+🛒 주식시장에서 자유롭게 사고팔 수 있어요.
+💰 실시간으로 가격이 변동해요.
+
+분산 투자:
+🧺 여러 주식, 채권, 자산에 분산 투자할 수 있어 리스크를 줄여요.
+예: 삼성전자, 현대차 등 여러 기업에 한 번에 투자 가능.
+
+운용 비용 저렴:
+💸 펀드보다 관리비용(수수료)이 낮아요.
+
+🧩 ETF의 종류
+📊 지수형 ETF:
+특정 주가지수를 따라가요.
+예: 코스피200 ETF → 코스피200 지수를 추종.
+
+🌱 섹터 ETF:
+특정 산업 분야에 집중 투자.
+예: 바이오, IT, 에너지 ETF.
+
+🌍 해외 ETF:
+해외 주식이나 지수에 투자.
+예: 미국 S&P500 ETF.
+
+💎 원자재 ETF:
+금, 은, 원유 등 원자재에 투자.
+예: 금 ETF, 석유 ETF.
+</예시>
+",
   "references": [
     {{
       "title": "참고자료 제목",
       "description": "참고자료에 대한 간단하면서 초보자가 이해하기 쉽게 설명",
       "source": "출처 (예: 금융감독원, 한국거래소 등)",
       "url": "https://example.com",
-      "imageUrl": "https://example.com/image.jpg"
     }}
   ],
   "relatedTopics": [
@@ -124,8 +155,6 @@ const systemTemplate = `당신은 ETF 전문가이자 ETF교육을 담당하고 
   ]
 }}`;
 
-const humanTemplate = "상황: {context}\n질문: {question}";
-
 // 채팅 기록 포맷팅 함수 수정
 const formatChatHistory = (messages: Message[] = []): string => {
   if (!Array.isArray(messages)) {
@@ -190,7 +219,7 @@ const transformSearchResults = (results: Document[]): AIResponse['references'] =
   }));
 };
 
-// 체인 정의
+// 체인 정의 수정
 const chain = RunnableSequence.from([
   {
     context: (input: ChatRequest) => input.context || '',
@@ -198,87 +227,95 @@ const chain = RunnableSequence.from([
     chat_history: (input: ChatRequest) => input.chat_history || '',
     references: async (input: ChatRequest) => {
       const docs = await retrieveRelatedDocs(input.message);
-      // 검색 결과에 현재 쿼리 정보 추가
-      docs.forEach(doc => {
-        doc.metadata = {
-          ...doc.metadata,
-          query: input.message,
-          timestamp: new Date().toISOString()
-        };
-      });
       const searchResults = transformSearchResults(docs);
       return JSON.stringify(searchResults, null, 2);
     }
   },
-  chatPrompt,
-  chatModel,
-  (response) => {
-    console.log('AI 응답 원본:', response);
+  async (formattedInput) => {
+    const messages = [
+      new SystemMessage(systemTemplate),
+      new HumanMessage(
+        `상황: ${formattedInput.context}\n` +
+        `질문: ${formattedInput.message}\n` +
+        `대화 기록: ${formattedInput.chat_history}\n` +
+        `참고 자료: ${formattedInput.references}`
+      )
+    ];
 
+    const response = await chatModel.invoke(messages);
+    const contentStr = response.content;
+    let cleanedStr = '';
+    
     try {
-      if (typeof response === 'string') {
-        const parsed = JSON.parse(response);
-        return {
-          ...parsed,
-          references: JSON.parse(parsed.references || '[]')
-        };
+      cleanedStr = contentStr
+        .replace(/^\s*\{{2,}/, '{')
+        .replace(/\}{2,}\s*$/, '}')
+        .replace(/\{{2,}/g, '{')
+        .replace(/\}{2,}/g, '}')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      console.log('정리된 JSON 문자열:', cleanedStr);
+      
+      if (!cleanedStr.startsWith('{') || !cleanedStr.endsWith('}')) {
+        throw new Error('Invalid JSON format');
       }
       
-      if (response.content) {
-        try {
-          const parsed = JSON.parse(response.content);
-          console.log('파싱된 응답:', parsed);
-          return parsed;
-        } catch (e) {
-          console.log('JSON 파싱 실패, 기본 형식으로 변환');
-          return {
-            message: response.content,
-            references: [],
-            relatedTopics: [],
-            nextCards: []
-          };
-        }
-      }
+      const parsed = JSON.parse(cleanedStr);
       
-      return response;
+      if (typeof parsed !== 'object' || !parsed.message) {
+        throw new Error('Invalid response structure');
+      }
+
+      return {
+        message: parsed.message,
+        references: Array.isArray(parsed.references) ? parsed.references : [],
+        relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
+        nextCards: Array.isArray(parsed.nextCards) ? parsed.nextCards : []
+      };
     } catch (error) {
-      console.error('응답 변환 중 오류:', error);
-      throw error;
+      console.error('응답 파싱 실패:', error);
+      console.log('원본 응답:', contentStr);
+      console.log('정리 시도한 문자열:', cleanedStr);
+      
+      return {
+        message: '죄송합니다. 응답을 처리하는 중에 오류가 발생했습니다.',
+        references: [],
+        relatedTopics: [],
+        nextCards: []
+      };
     }
   }
 ]);
 
-// 응답 처리 함수 수정
+// processAIResponse 함수도 더 안정적으로 수정
 const processAIResponse = (response: any) => {
-  console.log('processAIResponse 입력:', response); // 디버깅용
+  console.log('processAIResponse 입력:', response);
   
   try {
-    // 문자열이면 JSON으로 파싱
+    // 이미 객체인 경우 그대로 사용
     const parsedResponse = typeof response === 'string' 
       ? JSON.parse(response) 
       : response;
 
-    console.log('처리된 응답:', parsedResponse); // 디버깅용
-
-    // 응답 형식 확인 및 변환
-    if (!parsedResponse.message && !parsedResponse.content) {
-      console.log('message/content 필드 없음:', parsedResponse); // 디버깅용
-      throw new Error('응답에 message/content 필드가 없습니다');
-    }
-
-    const result = {
+    // 응답 구조 정규화
+    return {
       role: 'assistant',
-      content: parsedResponse.message || parsedResponse.content,
-      references: parsedResponse.references || [],
-      relatedTopics: parsedResponse.relatedTopics || [],
-      nextCards: parsedResponse.nextCards || []
+      content: parsedResponse.message || parsedResponse.content || '',
+      references: Array.isArray(parsedResponse.references) ? parsedResponse.references : [],
+      relatedTopics: Array.isArray(parsedResponse.relatedTopics) ? parsedResponse.relatedTopics : [],
+      nextCards: Array.isArray(parsedResponse.nextCards) ? parsedResponse.nextCards : []
     };
-
-    console.log('최종 응답:', result); // 디버깅용
-    return result;
   } catch (error) {
     console.error('응답 처리 중 오류:', error);
-    throw new Error('Invalid response format');
+    // 에러 발생 시 기본 응답 구조 반환
+    return {
+      role: 'assistant',
+      content: String(response),
+      references: [],
+      relatedTopics: [],
+      nextCards: []
+    };
   }
 };
 

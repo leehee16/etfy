@@ -96,19 +96,34 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
             <li>
               <button onClick={() => setActiveSession('investmentStyle')} className="flex items-center space-x-2 p-2 rounded hover:bg-[#2f2f2f] w-full text-left text-gray-300">
                 <BrainCircuit size={20} />
-                {isOpen && <span>투자성향 테스트</span>}
+                {isOpen && (
+                  <div className="flex items-center gap-2">
+                    <span>투자성향 테스트</span>
+                    <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-500 rounded-full">미완료</span>
+                  </div>
+                )}
               </button>
             </li>
             <li>
               <button onClick={() => setActiveSession('investmentKnowledge')} className="flex items-center space-x-2 p-2 rounded hover:bg-[#2f2f2f] w-full text-left text-gray-300">
                 <BookOpen size={20} />
-                {isOpen && <span>투자지식 테스트</span>}
+                {isOpen && (
+                  <div className="flex items-center gap-2">
+                    <span>투자지식 테스트</span>
+                    <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-500 rounded-full">미완료</span>
+                  </div>
+                )}
               </button>
             </li>
             <li>
               <button onClick={() => setActiveSession('etfQuiz')} className="flex items-center space-x-2 p-2 rounded hover:bg-[#2f2f2f] w-full text-left text-gray-300">
                 <HelpCircle size={20} />
-                {isOpen && <span>ETF 퀴즈</span>}
+                {isOpen && (
+                  <div className="flex items-center gap-2">
+                    <span>ETF 퀴즈</span>
+                    <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-500 rounded-full">생성중</span>
+                  </div>
+                )}
               </button>
             </li>
             <li><hr className="border-[#2f2f2f] my-2" /></li>

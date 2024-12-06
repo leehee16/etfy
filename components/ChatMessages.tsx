@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Message } from '@/types/chat';
 import { ChartBar, Search } from 'lucide-react';
 
@@ -32,14 +33,44 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                   : 'bg-[#242424] text-gray-200'
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">
-                {msg.content || (
-                  <span className="flex items-center gap-2">
-                    <span>생각중..</span>
-                    <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse" />
-                  </span>
-                )}
-              </p>
+              {msg.content ? (
+                <ReactMarkdown 
+                  className="whitespace-pre-wrap break-words prose dark:prose-invert prose-sm max-w-none"
+                  components={{
+                    // 코드 블록 스타일링
+                    code({ node, inline, className, children, ...props }) {
+                      return (
+                        <code
+                          className={`${inline ? 'bg-gray-700 rounded px-1' : 'block bg-gray-700 p-2 rounded'} ${className}`}
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    },
+                    // 링크 스타일링
+                    a({ node, className, children, ...props }) {
+                      return (
+                        <a
+                          className="text-blue-300 hover:text-blue-400 underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          {...props}
+                        >
+                          {children}
+                        </a>
+                      );
+                    }
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <span className="animate-pulse">생각중..</span>
+                  <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse" />
+                </span>
+              )}
               {msg.role === 'assistant' && msg.references && msg.references.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-2"></p>

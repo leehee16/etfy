@@ -1,13 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 
 // 컨텍스트별 테두리 스타일 정의
 const contextBorderStyles = {
-  '기초공부하기': 'border-[#FFE082] focus-within:ring-[#FFE082]',
-  '투자시작하기': 'border-[#81C784] focus-within:ring-[#81C784]',
-  '살펴보기': 'border-[#64B5F6] focus-within:ring-[#64B5F6]',
-  '분석하기': 'border-[#F48FB1] focus-within:ring-[#F48FB1]'
+  '기초공부하기': {
+    border: 'border-[#FFE082]',
+    ring: 'focus-within:ring-[#FFE082]',
+    shadow: 'rgba(255, 224, 130, 0.4)'
+  },
+  '투자시작하기': {
+    border: 'border-[#81C784]',
+    ring: 'focus-within:ring-[#81C784]',
+    shadow: 'rgba(129, 199, 132, 0.4)'
+  },
+  '살펴보기': {
+    border: 'border-[#64B5F6]',
+    ring: 'focus-within:ring-[#64B5F6]',
+    shadow: 'rgba(100, 181, 246, 0.4)'
+  },
+  '분석하기': {
+    border: 'border-[#F48FB1]',
+    ring: 'focus-within:ring-[#F48FB1]',
+    shadow: 'rgba(244, 143, 177, 0.4)'
+  }
 };
+
+const styles = `
+  @keyframes inputBorderPulse {
+    0% {
+      box-shadow: 0 0 0 0 var(--context-shadow);
+    }
+    70% {
+      box-shadow: 0 0 0 8px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
+  .context-input-transition {
+    transition: all 0.3s ease;
+  }
+
+  .context-input-animation {
+    animation: inputBorderPulse 1s ease-out;
+  }
+`;
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -20,10 +58,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   placeholder = '메시지를 입력하세요...',
   disabled = false,
-  context
+  context = '기초공부하기'
 }) => {
   const [message, setMessage] = useState('');
-  const borderStyle = context ? contextBorderStyles[context as keyof typeof contextBorderStyles] : 'border-gray-600';
+  const [isContextChanging, setIsContextChanging] = useState(false);
+  const contextStyle = context ? contextBorderStyles[context as keyof typeof contextBorderStyles] : null;
+
+  // 컨텍스트 변경 감지 및 애니메이션 처리
+  useEffect(() => {
+    setIsContextChanging(true);
+    const timer = setTimeout(() => {
+      setIsContextChanging(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [context]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,38 +82,48 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
-      <div className={`
-        flex items-center gap-2 p-2
-        bg-[#242424] rounded-lg
-        border-2 ${borderStyle}
-        transition-all duration-300
-        focus-within:ring-2 focus-within:ring-opacity-50
-      `}>
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder-gray-400"
-        />
-        <button
-          type="submit"
-          disabled={!message.trim() || disabled}
+    <>
+      <style>{styles}</style>
+      <form onSubmit={handleSubmit} className="relative">
+        <div
           className={`
-            p-2 rounded-lg
-            transition-colors duration-300
-            ${message.trim() && !disabled
-              ? 'text-white hover:bg-gray-700'
-              : 'text-gray-500 cursor-not-allowed'
-            }
+            flex items-center gap-2 p-2
+            bg-[#242424] rounded-lg
+            border-2 ${contextStyle?.border || 'border-gray-600'}
+            context-input-transition
+            ${isContextChanging ? 'context-input-animation' : ''}
+            focus-within:ring-2 focus-within:ring-opacity-50
+            ${contextStyle?.ring || 'focus-within:ring-gray-600'}
           `}
+          style={{
+            '--context-shadow': contextStyle?.shadow || 'rgba(75, 85, 99, 0.4)'
+          } as React.CSSProperties}
         >
-          <Send size={20} />
-        </button>
-      </div>
-    </form>
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder-gray-400"
+          />
+          <button
+            type="submit"
+            disabled={!message.trim() || disabled}
+            className={`
+              p-2 rounded-lg
+              transition-colors duration-300
+              ${message.trim() && !disabled
+                ? 'text-white hover:bg-gray-700'
+                : 'text-gray-500 cursor-not-allowed'
+              }
+            `}
+          >
+            <Send size={20} />
+          </button>
+        </div>
+      </form>
+    </>
   );
 };
 

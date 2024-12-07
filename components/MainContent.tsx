@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Book, TrendingUp, Search, BarChartIcon as ChartBar } from 'lucide-react';
-import SearchInput from './SearchInput';
 import RightPanel from './RightPanel';
 import { Message, Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
@@ -72,34 +71,47 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
     
-    const userMessage: Message = { 
-      role: 'user', 
-      content: message,
-      context: activeSession
-    };
-    setMessages(prev => [...prev, userMessage]);
-    
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-
     setIsLoading(true);
 
     try {
-      const thinkingMessage: Message = {
-        role: 'assistant',
-        content: null,
-        context: activeSession
+      // 컨텍스트 감지
+      const contextResponse = await fetch('/api/detectContext', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+
+      if (!contextResponse.ok) throw new Error('컨텍스트 감지 실패');
+      
+      const { context } = await contextResponse.json();
+      
+      // 홈 화면이거나 컨텍스트가 변경된 경우에만 세션 전환
+      if (activeSession === 'home' || context !== activeSession) {
+        setActiveSession(context);
+        if (activeSession === 'home') {
+          const greeting = cards.find(card => card.title === context)?.greeting || '안녕하세요!';
+          setMessages([{ role: 'assistant', content: greeting }]);
+        }
+      }
+
+      const userMessage: Message = { 
+        role: 'user',
+        content: message,
+        context: context // 감지된 컨텍스트 사용
       };
-      setMessages(prev => [...prev, thinkingMessage]);
+      setMessages(prev => [...prev, userMessage]);
+      
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
 
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           message,
           messages: [...messages, userMessage],
-          context: activeSession
+          context: context // 감지된 컨텍스트 사용
         }),
       });
 
@@ -113,18 +125,16 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         references: data.references || [],
         relatedTopics: data.relatedTopics || [],
         nextCards: data.nextCards || [],
-        context: activeSession
+        context: context // 감지된 컨텍스트 사용
       };
 
-      setMessages(prev => prev.map((msg, index) => 
-        index === prev.length - 1 ? aiMessage : msg
-      ));
+      setMessages(prev => [...prev, aiMessage]);
       setCurrentReferences(data.references || []);
       setRelatedTopics(data.relatedTopics || []);
       
       setSessionMessages(prev => ({
         ...prev,
-        [activeSession]: [...prev[activeSession] || [], userMessage, aiMessage]
+        [context]: [...(prev[context] || []), userMessage, aiMessage] // 감지된 컨텍스트의 세션에 메시지 저장
       }));
 
     } catch (error) {
@@ -138,7 +148,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       
       setSessionMessages(prev => ({
         ...prev,
-        [activeSession]: [...prev[activeSession] || [], userMessage, errorMessage]
+        [activeSession]: [...prev[activeSession] || [], errorMessage]
       }));
     } finally {
       setIsLoading(false);
@@ -170,7 +180,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                         }
                       `}
                       style={{
-                        ...(sessionMessages[item.id]?.length > 0 ? {
+                        ...(sessionMessages[item.id]?.some(msg => msg.context === item.id) ? {
                           border: '3px solid transparent',
                           backgroundImage: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #60a5fa, #c084fc, #60a5fa)',
                           backgroundOrigin: 'border-box',
@@ -194,8 +204,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                 <div className="flex-shrink-0 py-8 px-6">
                   <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-200 mb-2">
+                      ETF 투자 도우미
                     </h2>
                     <p className="text-gray-400">
+                      무엇을 도와드릴까요?
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
@@ -229,6 +241,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     handleSendMessage={handleSendMessage} 
                     messagesEndRef={messagesEndRef}
                     context={activeSession}
+                    isLoading={isLoading}
                   />
                 </div>
                 <div className="flex-shrink-0 p-4 bg-[#1f1f1f]">

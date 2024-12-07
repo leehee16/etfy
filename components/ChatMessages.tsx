@@ -35,20 +35,22 @@ interface ChatMessagesProps {
   messages: Message[];
   handleSendMessage: (message: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
-  context?: string;
+  context: string;
+  isLoading?: boolean;
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({ 
   messages, 
   handleSendMessage, 
   messagesEndRef,
-  context = '기초공부하기'
+  context = '기초공부하기',
+  isLoading = false
 }) => {
   const animatedMessages = useRef(new Set<string>());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
 
-  const style = contextStyles[context as keyof typeof contextStyles] || contextStyles['기초공부하기'];
+  const messageStyle = contextStyles[context as keyof typeof contextStyles] || contextStyles['기초공부하기'];
 
   useEffect(() => {
     // 새로운 메시지가 추가되었고, 그것이 사용자의 메시지일 때만 스크롤
@@ -87,9 +89,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       {messages.map((msg, index) => {
         const msgKey = `${msg.role}-${index}`;
         const shouldAnimate = index === messages.length - 1;
-        const messageStyle = msg.context ? 
+        const currentStyle = msg.context ? 
           contextStyles[msg.context as keyof typeof contextStyles] || contextStyles['기초공부하기'] :
-          contextStyles[context as keyof typeof contextStyles] || contextStyles['기초공부하기'];
+          messageStyle;
 
         return (
           <div key={msgKey} className={`flex flex-col space-y-4 ${shouldAnimate ? 'animate-fadeIn' : ''}`}>
@@ -98,30 +100,31 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 className={`max-w-[80%] p-4 rounded-lg transform transition-all duration-300 ease-in-out ${
                   msg.role === 'user'
                     ? 'bg-blue-500 text-white'
-                    : `${messageStyle.bgColor} ${messageStyle.textColor}`
+                    : `${currentStyle.bgColor} ${currentStyle.textColor}`
                 }`}
               >
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-2 mb-2 text-sm font-medium">
-                    <span>{messageStyle.icon}</span>
-                    <span>{messageStyle.label}</span>
+                    <span>{currentStyle.icon}</span>
+                    <span>{currentStyle.label}</span>
                   </div>
                 )}
-                {msg.content ? (
+                {msg.content && (
                   <ReactMarkdown 
                     className="whitespace-pre-wrap break-words prose dark:prose-invert prose-sm max-w-none"
                     components={{
-                      code({ node, inline, className, children, ...props }) {
+                      code({ children, className, ...props }) {
+                        const isInline = !props.node?.position?.start.line;
                         return (
                           <code
-                            className={`${inline ? 'bg-gray-700 rounded px-1' : 'block bg-gray-700 p-2 rounded'} ${className}`}
+                            className={`${isInline ? 'bg-gray-700 rounded px-1' : 'block bg-gray-700 p-2 rounded'} ${className || ''}`}
                             {...props}
                           >
                             {children}
                           </code>
                         );
                       },
-                      a({ node, className, children, ...props }) {
+                      a({ children, ...props }) {
                         return (
                           <a
                             className="text-blue-300 hover:text-blue-400 underline"
@@ -146,24 +149,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                   >
                     {msg.content}
                   </ReactMarkdown>
-                ) : (
-                  <span className="flex items-center gap-3">
-                    <span className="text-lg font-medium animate-pulse">
-                      {messageStyle.icon} 생각중
-                    </span>
-                    <span className="flex space-x-1">
-                      <span className="w-2 h-2 bg-current rounded-full animate-[bounce_0.8s_infinite]" 
-                        style={{ animationDelay: '0ms', opacity: 0.8 }} />
-                      <span className="w-2 h-2 bg-current rounded-full animate-[bounce_0.8s_infinite]" 
-                        style={{ animationDelay: '150ms', opacity: 0.9 }} />
-                      <span className="w-2 h-2 bg-current rounded-full animate-[bounce_0.8s_infinite]" 
-                        style={{ animationDelay: '300ms', opacity: 1 }} />
-                    </span>
-                  </span>
                 )}
                 {msg.role === 'assistant' && msg.references && msg.references.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2"></p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">참고 자료:</p>
                     <div className="space-y-2">
                       {msg.references.map((ref, refIndex) => (
                         <div 
@@ -175,7 +164,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           </div>
                           {ref.source && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-300 dark:bg-gray-600 rounded">
-                               {ref.source}
+                              {ref.source}
                             </span>
                           )}
                         </div>
@@ -218,6 +207,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           </div>
         );
       })}
+      {isLoading && (
+        <div className="flex justify-start">
+          <div className="max-w-[80%] rounded-lg p-4 bg-[#2f2f2f]">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        </div>
+      )}
       <div ref={messagesEndRef} className="h-px" />
       <button
         onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}

@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 
 interface LoginData {
   id: string;
   password: string;
 }
 
-const Login: React.FC = () => {
-  const navigate = useNavigate();
+const Login = () => {
+  const router = useRouter();
   const [loginData, setLoginData] = useState<LoginData>({
     id: '',
     password: '',
   });
 
-  // 입력 필드 변경 핸들러
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setLoginData(prev => ({
@@ -22,53 +21,59 @@ const Login: React.FC = () => {
     }));
   };
 
-  // 로그인 제출 핸들러
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 로컬 스토리지에서 사용자 데이터 확인
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const user = users.find((u: any) => 
       u.id === loginData.id && u.password === loginData.password
     );
 
     if (user) {
-      // 로그인 성공 시 세션 스토리지에 로그인 상태 저장
       sessionStorage.setItem('currentUser', JSON.stringify(user));
       alert('로그인 성공!');
-      navigate('/main'); // 메인 페이지로 이동
+      router.push('/main');
     } else {
       alert('아이디 또는 비밀번호가 일치하지 않습니다.');
     }
   };
 
-  // 회원가입 페이지로 이동
   const handleSignUp = () => {
-    navigate('/signup');
+    router.push('/signup');
   };
 
   return (
     <div className="login-container">
-      <h2>로그인</h2>
+      <div className="logo-container">
+        <img 
+          src="/images/etfytypo2.png" 
+          alt="ETF Logo" 
+          width={280}
+          height={100}
+          style={{ objectFit: 'contain' }}
+        />
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>아이디:</label>
+          <label>아이디</label>
           <input
             type="text"
             name="id"
             value={loginData.id}
             onChange={handleChange}
             required
+            placeholder="아이디를 입력하세요"
           />
         </div>
         <div className="form-group">
-          <label>비밀번호:</label>
+          <label>비밀번호</label>
           <input
             type="password"
             name="password"
             value={loginData.password}
             onChange={handleChange}
             required
+            placeholder="비밀번호를 입력하세요"
           />
         </div>
         <button type="submit">로그인</button>

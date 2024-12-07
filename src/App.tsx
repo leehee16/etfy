@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
-import MainContent from '../components/MainContent';
-import ProtectedRoute from '../components/ProtectedRoute';
+import MainContent from './components/MainContent';
+import ProtectedRoute from './components/ProtectedRoute';
 import './styles/auth.css';
 
 function App() {

@@ -48,7 +48,15 @@ const Login: NextPage = () => {
 
   return (
     <div className="login-container">
-      <h2>로그인</h2>
+      <div className="logo-container">
+        <img 
+          src="/images/etfytypo2.png" 
+          alt="ETF Logo" 
+          width={280}
+          height={100}
+          style={{ objectFit: 'contain' }}
+        />
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>아이디:</label>

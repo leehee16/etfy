@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 
 interface UserData {
   name: string;
@@ -8,8 +8,8 @@ interface UserData {
   password: string;
 }
 
-const SignUp: React.FC = () => {
-  const navigate = useNavigate();
+const SignUp = () => {
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData>({
     name: '',
     age: '',
@@ -17,7 +17,6 @@ const SignUp: React.FC = () => {
     password: '',
   });
 
-  // 입력 필드 변경 핸들러
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setUserData(prev => ({
@@ -26,14 +25,11 @@ const SignUp: React.FC = () => {
     }));
   };
 
-  // 회원가입 제출 핸들러
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 로컬 스토리지에 사용자 데이터 저장
     const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // 아이디 중복 체크
     if (existingUsers.some((user: UserData) => user.id === userData.id)) {
       alert('이미 존재하는 아이디입니다.');
       return;
@@ -43,54 +39,71 @@ const SignUp: React.FC = () => {
     localStorage.setItem('users', JSON.stringify(existingUsers));
     
     alert('회원가입이 완료되었습니다.');
-    navigate('/login'); // 로그인 페이지로 이동
+    router.push('/login');
+  };
+
+  const handleLogin = () => {
+    router.push('/login');
   };
 
   return (
     <div className="signup-container">
-      <h2>회원가입</h2>
+      <div className="logo-container">
+        <img 
+          src="/images/etfytypo2.png" 
+          alt="ETF Logo" 
+          width={280}
+          height={100}
+          style={{ objectFit: 'contain' }}
+        />
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>이름:</label>
+          <label>이름</label>
           <input
             type="text"
             name="name"
             value={userData.name}
             onChange={handleChange}
             required
+            placeholder="이름을 입력하세요"
           />
         </div>
         <div className="form-group">
-          <label>나이:</label>
+          <label>나이</label>
           <input
             type="number"
             name="age"
             value={userData.age}
             onChange={handleChange}
             required
+            placeholder="나이를 입력하세요"
           />
         </div>
         <div className="form-group">
-          <label>아이디:</label>
+          <label>아이디</label>
           <input
             type="text"
             name="id"
             value={userData.id}
             onChange={handleChange}
             required
+            placeholder="아이디를 입력하세요"
           />
         </div>
         <div className="form-group">
-          <label>비밀번호:</label>
+          <label>비밀번호</label>
           <input
             type="password"
             name="password"
             value={userData.password}
             onChange={handleChange}
             required
+            placeholder="비밀번호를 입력하세요"
           />
         </div>
         <button type="submit">가입하기</button>
+        <button type="button" onClick={handleLogin}>로그인하기</button>
       </form>
     </div>
   );

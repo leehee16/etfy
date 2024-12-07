@@ -1,20 +1,9 @@
+import React from 'react';
 import type { AppProps } from 'next/app';
-import { useState } from 'react';
-import '@/styles/auth.css';
+import '../src/styles/auth.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSession, setActiveSession] = useState('home');
-
-  return (
-    <Component 
-      {...pageProps} 
-      isSidebarOpen={isSidebarOpen}
-      setIsSidebarOpen={setIsSidebarOpen}
-      activeSession={activeSession}
-      setActiveSession={setActiveSession}
-    />
-  );
+  return <Component {...pageProps} />;
 }
 
 export default MyApp; 

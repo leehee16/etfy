@@ -54,12 +54,12 @@ const formatChatHistory = (messages: Message[] = []): string => {
 
 // OpenAI 모델 초기화
 const model = new ChatOpenAI({
-  modelName: 'gpt-4-turbo-preview',
+  modelName: 'gpt-4o-mini',
   temperature: 0.7,
   openAIApiKey: process.env.OPENAI_API_KEY,
 });
 
-// 관련 문서 검색 함수 수정
+// 관련 문서 검색 함수
 const retrieveRelatedDocs = async (query: string): Promise<Document[]> => {
   try {
     if (!query) {
@@ -94,7 +94,7 @@ const transformSearchResults = (results: Document[]): AIResponse['references'] =
   }));
 };
 
-// 체인 정의 수정
+// 체인 정의
 const chain = RunnableSequence.from([
   {
     context: (input: ChatRequest) => input.context || '',
@@ -125,13 +125,13 @@ const chain = RunnableSequence.from([
     let cleanedStr = '';
     
     try {
-      // 모든 이중 중괄호를 단일 중괄호로 변환
+      // 파서 : 모든 이중 중괄호를 단일 중괄호로 변환
       cleanedStr = contentStr.toString()
         .replace(/\{\{/g, '{')  // 모든 이중 여는 중괄호를 단일로
         .replace(/\}\}/g, '}')  // 모든 이중 닫는 중괄호를 단일로
         .trim();
 
-      // 첫 번째 { 부터 마지막 } 까지만 추출
+      // 파서 : 첫 번째 { 부터 마지막 } 까지만 추출
       const match = cleanedStr.match(/\{[\s\S]*\}/);
       if (!match) {
         throw new Error('No valid JSON object found');
@@ -190,7 +190,7 @@ const chain = RunnableSequence.from([
   }
 ]);
 
-// processAIResponse 함수도 더 안정적으로 수정
+// processAIResponse 함수
 const processAIResponse = (response: any) => {
   console.log('processAIResponse 입력:', response);
   

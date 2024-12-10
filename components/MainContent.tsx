@@ -36,22 +36,30 @@ const cardStyles = {
   '기초공부하기': {
     hover: 'hover:bg-[#FFE082] hover:text-gray-800',
     icon: '📚',
-    active: 'bg-amber-500/20'
+    active: 'bg-[#2f2f2f]',
+    gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #FFE082, #FFB74D)',
+    dotColor: '#FFE082'
   },
   '투자시작하기': {
     hover: 'hover:bg-[#81C784] hover:text-white',
     icon: '🎯',
-    active: 'bg-green-500/20'
+    active: 'bg-[#2f2f2f]',
+    gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #81C784, #4CAF50)',
+    dotColor: '#81C784'
   },
   '살펴보기': {
     hover: 'hover:bg-[#64B5F6] hover:text-white',
     icon: '🔍',
-    active: 'bg-blue-500/20'
+    active: 'bg-[#2f2f2f]',
+    gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #64B5F6, #2196F3)',
+    dotColor: '#64B5F6'
   },
   '분석하기': {
     hover: 'hover:bg-[#F48FB1] hover:text-white',
     icon: '📊',
-    active: 'bg-pink-500/20'
+    active: 'bg-[#2f2f2f]',
+    gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #F9A8D4, #EC4899)',
+    dotColor: '#F9A8D4'
   }
 };
 
@@ -285,24 +293,36 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                       key={item.id}
                       onClick={() => setActiveSession(item.id)}
                       className={`
-                        relative px-4 py-2 rounded-lg transition-colors flex items-center space-x-2
+                        group relative px-4 py-2 rounded-lg transition-colors flex items-center space-x-2
                         ${activeSession === item.id 
-                          ? `${cardStyles[item.id as keyof typeof cardStyles].active} text-gray-200` 
+                          ? `${cardStyles[item.id as keyof typeof cardStyles].active} text-gray-200 border-2 border-transparent` 
                           : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
                         }
                       `}
                       style={{
-                        ...(sessionMessages[item.id]?.some(msg => msg.context === item.id) ? {
-                          border: '3px solid transparent',
-                          backgroundImage: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #60a5fa, #c084fc, #60a5fa)',
+                        ...(activeSession === item.id ? {
+                          border: '2px solid transparent',
+                          backgroundImage: cardStyles[item.id as keyof typeof cardStyles].gradient,
                           backgroundOrigin: 'border-box',
                           backgroundClip: 'padding-box, border-box',
-                          animation: 'gradient 3s ease infinite'
+                          animation: sessionMessages[item.id]?.some(msg => msg.context === item.id) 
+                            ? 'gradient 3s ease infinite'
+                            : 'none'
                         } : {})
                       }}
                     >
-                      {item.icon}
-                      <span className="text-sm font-medium">{item.id}</span>
+                      <div className="flex items-center space-x-2">
+                        {sessionMessages[item.id]?.some(msg => msg.context === item.id) && (
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ 
+                              backgroundColor: cardStyles[item.id as keyof typeof cardStyles].dotColor
+                            }}
+                          />
+                        )}
+                        {item.icon}
+                        <span className="text-sm font-medium">{item.id}</span>
+                      </div>
                     </button>
                   ))}
                 </nav>

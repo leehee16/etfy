@@ -86,7 +86,35 @@ module.exports = {
         slideInFromRight: 'slideInFromRight 0.3s ease-out forwards',
         fadeIn: 'fadeIn 0.3s ease-out forwards',
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: 'inherit',
+            a: {
+              color: '#3b82f6',
+              '&:hover': {
+                color: '#60a5fa',
+              },
+            },
+            strong: {
+              color: 'inherit',
+            },
+            em: {
+              color: 'inherit',
+            },
+            code: {
+              color: 'inherit',
+              background: 'rgba(45, 45, 45, 0.5)',
+              borderRadius: '0.25rem',
+              padding: '0.125rem 0.25rem',
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require('@tailwindcss/typography'),
+  ],
 } 

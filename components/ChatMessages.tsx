@@ -1,5 +1,6 @@
 import React from 'react';
 import { Message } from '@/types/chat';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -14,22 +15,26 @@ const contextColors = {
   '기초공부하기': {
     primary: '#FFE082',
     secondary: '#FFB74D',
-    gradient: 'from-amber-300 to-amber-500'
+    gradient: 'from-amber-300 to-amber-500',
+    bg: 'bg-amber-400'
   },
   '투자시작하기': {
     primary: '#81C784',
     secondary: '#4CAF50',
-    gradient: 'from-green-400 to-green-600'
+    gradient: 'from-green-400 to-green-600',
+    bg: 'bg-green-500'
   },
   '살펴보기': {
     primary: '#64B5F6',
     secondary: '#2196F3',
-    gradient: 'from-blue-400 to-blue-600'
+    gradient: 'from-blue-400 to-blue-600',
+    bg: 'bg-blue-500'
   },
   '분석하기': {
-    primary: '#F48FB1',
-    secondary: '#E91E63',
-    gradient: 'from-pink-400 to-pink-600'
+    primary: '#F9A8D4',
+    secondary: '#EC4899',
+    gradient: 'from-pink-300 to-pink-500',
+    bg: 'bg-pink-400'
   }
 };
 
@@ -49,7 +54,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           contextColors[context as keyof typeof contextColors] || {
             primary: '#9575CD',
             secondary: '#673AB7',
-            gradient: 'from-purple-400 to-purple-600'
+            gradient: 'from-purple-400 to-purple-600',
+            bg: 'bg-purple-500'
           };
 
         return (
@@ -71,10 +77,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
               )}
               <div className={`${message.role === 'user' ? 'max-w-[60%]' : 'max-w-[75%]'}`}>
                 <div
-                  className={`inline-block rounded-lg p-4 w-full transition-all duration-200 ease-in-out ${
+                  className={`inline-block rounded-lg w-full transition-all duration-200 ease-in-out ${
                     message.role === 'assistant'
-                      ? 'bg-[#2f2f2f] text-gray-200 animate-slideInFromLeft'
-                      : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white animate-slideInFromRight'
+                      ? 'bg-[#2f2f2f] text-gray-200 animate-slideInFromLeft p-4'
+                      : `${messageColors.bg} text-white animate-slideInFromRight py-2 px-4 opacity-80`
                   }`}
                 >
                   {message.role === 'assistant' && message.context && (
@@ -90,9 +96,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       {message.context === '분석하기' && '📊 투자 분석'}
                     </div>
                   )}
-                  <pre className="whitespace-pre-wrap font-sans break-words">
-                    {message.content}
-                  </pre>
+                  <div className="prose prose-invert max-w-none">
+                    <ReactMarkdown>
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </div>
             </div>

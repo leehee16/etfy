@@ -69,6 +69,42 @@ interface MainContentProps {
   setActiveSession: React.Dispatch<React.SetStateAction<string>>;
 }
 
+const DashboardCard = ({ 
+  title, 
+  content, 
+  icon, 
+  style, 
+  onClick 
+}: { 
+  title: string; 
+  content: React.ReactNode; 
+  icon: React.ReactNode; 
+  style: any; 
+  onClick: () => void; 
+}) => (
+  <button
+    onClick={onClick}
+    className={`group p-6 rounded-lg bg-[#242424] text-gray-200 transition-all duration-300 ease-in-out hover:scale-105 min-h-[200px] w-full ${style.hover}`}
+  >
+    <div className="flex items-center gap-2 mb-4">
+      <span className="text-2xl">{style.icon}</span>
+      <h3 className="text-xl font-bold">{title}</h3>
+    </div>
+    {content}
+  </button>
+);
+
+const SimpleLineChart = () => (
+  <div className="relative h-16 mt-4 z-10">
+    <div className="absolute bottom-0 left-0 w-full h-full flex items-end">
+      <div className="w-1/4 h-8 bg-green-500/20 rounded-sm group-hover:animate-chart-line1"></div>
+      <div className="w-1/4 h-6 bg-green-500/30 rounded-sm group-hover:animate-chart-line2"></div>
+      <div className="w-1/4 h-10 bg-green-500/40 rounded-sm group-hover:animate-chart-line3"></div>
+      <div className="w-1/4 h-12 bg-green-500/50 rounded-sm group-hover:animate-chart-line4"></div>
+    </div>
+  </div>
+);
+
 const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession, setActiveSession }) => {
   const [sessionMessages, setSessionMessages] = useState<Record<string, ChatMessage[]>>({
     '기초공부하기': [],
@@ -342,25 +378,88 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                       무엇을 도와드릴까요?
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                    {cards.map((card) => {
-                      const style = cardStyles[card.title as keyof typeof cardStyles];
-                      return (
-                        <button
-                          key={card.title}
-                          onClick={() => handleCardClick(card.title)}
-                          className={`p-6 rounded-lg bg-[#242424] text-gray-200
-                            transition-all duration-300 ease-in-out
-                            ${style.hover}`}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-2xl">{style.icon}</span>
-                            <h3 className="text-xl font-bold">{card.title}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <DashboardCard
+                      title="기초공부하기"
+                      content={
+                        <div className="space-y-2 animate-fade-in">
+                          <div className="bg-[#2f2f2f] p-3 rounded-lg min-h-[120px]">
+                            <div className="flex items-center gap-2 text-amber-300 mb-3">
+                              <span className="text-xl">📖</span>
+                              <p className="text-sm">최근 학습한 용어</p>
+                            </div>
+                            <p className="text-gray-300 group-hover:hidden">ETF 추적오차율</p>
+                            <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block">
+                              목표와 실제 성적이 얼마나 다른지 알려주는 숫자에요.
+                            </p>
+                            <div className="flex gap-2 flex-wrap mt-3">
+                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="주가 변동의 2배 수익을 추구하는 ETF입니다.">레버리지</span>
+                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="주가 하락 시 수익을 추구하는 ETF입니다.">인버스</span>
+                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="기업의 시가총액 비중에 따라 투자하는 방식입니다.">시총가중</span>
+                            </div>
                           </div>
-                          <p className="text-gray-400">{card.description}</p>
-                        </button>
-                      );
-                    })}
+                        </div>
+                      }
+                      icon={<Book size={24} />}
+                      style={cardStyles['기초공부하기']}
+                      onClick={() => handleCardClick('기초공부하기')}
+                    />
+                    <DashboardCard
+                      title="투자시작하기"
+                      content={
+                        <div className="space-y-2 animate-fade-in">
+                          <div className="bg-[#2f2f2f] p-3 rounded-lg min-h-[120px]">
+                            <div className="flex items-center gap-2 text-green-300 mb-3">
+                              <span className="text-xl">💡</span>
+                              <p className="text-sm">새로운 투자 방법</p>
+                            </div>
+                            <p className="text-gray-300 text-sm mb-3">ISA 계좌로 ETF 투자하기</p>
+                            <div className="flex gap-2 flex-wrap">
+                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="증권사 계좌를 만들어요">계좌개설</span>
+                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="투자 성향을 파악해요">투자성향</span>
+                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="실제 투자를 시작해요">매매하기</span>
+                            </div>
+                          </div>
+                        </div>
+                      }
+                      icon={<TrendingUp size={24} />}
+                      style={cardStyles['투자시작하기']}
+                      onClick={() => handleCardClick('투자시작하기')}
+                    />
+                    <DashboardCard
+                      title="살펴보기"
+                      content={
+                        <div className="bg-[#2f2f2f] p-3 rounded-lg">
+                          <div className="flex items-center gap-2 text-blue-300 mb-2">
+                            <span className="text-xl">🔥</span>
+                            <p className="text-sm">실시간 HOT</p>
+                          </div>
+                          <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>
+                        </div>
+                      }
+                      icon={<Search size={24} />}
+                      style={cardStyles['살펴보기']}
+                      onClick={() => handleCardClick('살펴보기')}
+                    />
+                    <DashboardCard
+                      title="분석하기"
+                      content={
+                        <div className="space-y-2 animate-fade-in">
+                          <div className="bg-[#2f2f2f] p-3 rounded-lg">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-300">KODEX 200</span>
+                              <span className="text-green-400">+2.0%</span>
+                            </div>
+                            <div className="relative mt-2">
+                              <SimpleLineChart />
+                            </div>
+                          </div>
+                        </div>
+                      }
+                      icon={<ChartBar size={24} />}
+                      style={cardStyles['분석하기']}
+                      onClick={() => handleCardClick('분석하기')}
+                    />
                   </div>
                 </div>
               )}

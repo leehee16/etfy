@@ -97,7 +97,12 @@ const RightPanel: React.FC<RightPanelProps> = ({
           </li>
         </ul>
         <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f] transition-colors">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs">새로 나왔어요</span>
+            <span className="text-gray-400 text-sm">2024.01</span>
+          </div>
           <FadeIn delay={500}>
+            <div className="relative">
               <Image 
                 src="/images/valuechain.png" 
                 alt="SK하이닉스 밸류체인" 
@@ -106,15 +111,31 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 className="object-cover rounded-lg"
                 style={{ objectFit: 'cover' }}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-lg"/>
+            </div>
           </FadeIn>
-          <FadeIn 
-            text={"UNICORN SK하이닉스밸류체인액티브\n\n" + 
-                 "인공지능(AI)**과 관련된 반도체에 투자하는 새로운 ETF를 시장에 내놓았어요.\n\n" +
-                 "이건 마치 로봇과 컴퓨터의 뇌를 만드는 회사들에 투자하는 것과 같아요.\n\n" +
-                 "이렇게 새로운 ETF가 나오면, 사람들은 다양한 분야에 쉽게 투자할 수 있게 돼요."}
-            delay={800}
-            className="text-gray-300 hover:text-gray-200 cursor-pointer font-bold text-base whitespace-pre-line leading-relaxed"
-          />
+          <div className="space-y-3 mt-4">
+            <h3 className="text-lg font-bold text-gray-200">UNICORN SK하이닉스밸류체인액티브</h3>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300">#AI</span>
+              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300">#반도체</span>
+              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300">#밸류체인</span>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-300">
+                인공지능(AI)과 관련된 반도체에 투자하는 새로운 ETF를 시장에 내놓았어요.
+              </p>
+              <p className="text-sm text-gray-400">
+                이건 마치 로봇과 컴퓨터의 뇌를 만드는 회사들에 투자하는 것과 같아요.
+              </p>
+              <p className="text-sm text-gray-400">
+                이렇게 새로운 ETF가 나오면, 사람들은 다양한 분야에 쉽게 투자할 수 있게 돼요.
+              </p>
+            </div>
+            <button className="w-full mt-3 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm transition-colors">
+              자세히 알아보기
+            </button>
+          </div>
         </div>
       </>
     );

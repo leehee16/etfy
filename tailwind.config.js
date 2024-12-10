@@ -78,6 +78,38 @@ module.exports = {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        'grow-height': {
+          '0%': { height: '0' },
+          '100%': { height: '100%' }
+        },
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        'slide-up': {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        'chart-line1': {
+          '0%': { height: '2rem' },
+          '50%': { height: '3rem' },
+          '100%': { height: '2rem' }
+        },
+        'chart-line2': {
+          '0%': { height: '1.5rem' },
+          '50%': { height: '2.5rem' },
+          '100%': { height: '1.5rem' }
+        },
+        'chart-line3': {
+          '0%': { height: '2.5rem' },
+          '50%': { height: '1.5rem' },
+          '100%': { height: '2.5rem' }
+        },
+        'chart-line4': {
+          '0%': { height: '3rem' },
+          '50%': { height: '2rem' },
+          '100%': { height: '3rem' }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -85,6 +117,13 @@ module.exports = {
         slideInFromLeft: 'slideInFromLeft 0.3s ease-out forwards',
         slideInFromRight: 'slideInFromRight 0.3s ease-out forwards',
         fadeIn: 'fadeIn 0.3s ease-out forwards',
+        'grow-height': 'grow-height 1s ease-out forwards',
+        'fade-in': 'fade-in 0.5s ease-out forwards',
+        'slide-up': 'slide-up 0.5s ease-out forwards',
+        'chart-line1': 'chart-line1 2s ease-in-out forwards',
+        'chart-line2': 'chart-line2 2s ease-in-out forwards',
+        'chart-line3': 'chart-line3 2s ease-in-out forwards',
+        'chart-line4': 'chart-line4 2s ease-in-out forwards'
       },
       typography: {
         DEFAULT: {

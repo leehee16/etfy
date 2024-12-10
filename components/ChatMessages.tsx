@@ -101,6 +101,75 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       {message.content}
                     </ReactMarkdown>
                   </div>
+                  {message.nextCards && message.nextCards.length > 0 && (
+                    <div className="mt-4 grid gap-2">
+                      {message.nextCards.map((card, idx) => {
+                        const isQuestion = card.type === 'question';
+                        const cardContext = card.context || message.context || context;
+
+                        // 컨텍스트별 스타일 클래스
+                        const getContextClasses = (context: string) => {
+                          switch(context) {
+                            case '기초공부하기':
+                              return {
+                                border: 'border-amber-500/20',
+                                bg: 'bg-amber-500/5',
+                                text: 'text-amber-300'
+                              };
+                            case '투자시작하기':
+                              return {
+                                border: 'border-green-500/20',
+                                bg: 'bg-green-500/5',
+                                text: 'text-green-300'
+                              };
+                            case '살펴보기':
+                              return {
+                                border: 'border-blue-500/20',
+                                bg: 'bg-blue-500/5',
+                                text: 'text-blue-300'
+                              };
+                            case '분석하기':
+                              return {
+                                border: 'border-pink-500/20',
+                                bg: 'bg-pink-500/5',
+                                text: 'text-pink-300'
+                              };
+                            default:
+                              return {
+                                border: 'border-gray-500/20',
+                                bg: 'bg-gray-500/5',
+                                text: 'text-gray-300'
+                              };
+                          }
+                        };
+
+                        const contextClasses = getContextClasses(cardContext);
+
+                        // 메시지 정제 함수
+                        const cleanMessage = (message: string) => {
+                          return message.replace(/^(다음 단계 실행|다음 단계|실행|질문)\s*:\s*/i, '').trim();
+                        };
+
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleSendMessage(cleanMessage(card.title))}
+                            className={`p-3 rounded-lg border text-left transition-colors hover:bg-[#2f2f2f] ${contextClasses.border} ${contextClasses.bg}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">
+                                {isQuestion ? '❓' : '➡️'}
+                              </span>
+                              <h4 className={`text-sm font-medium ${contextClasses.text}`}>
+                                {card.title}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1 ml-7">{card.description}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

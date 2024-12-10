@@ -14,7 +14,7 @@ export const basicStudyTemplate = `당신은 ETF 투자 교육 전문가입니�
   "relatedTopics": ["관련 주제1", "관련 주제2"],
   "nextCards": [
     {
-      "title": "다음 질문이나 행동",
+      "title": "다음 질문이나 행동에 따른 질문",
       "description": "설명",
       "type": "question 또는 action",
       "context": "기초공부하기|투자시작하기|살펴보기|분석하기 중 하나"

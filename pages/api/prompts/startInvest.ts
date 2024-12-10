@@ -42,7 +42,7 @@ export const startInvestTemplate = `당신은 ETF 전문가이자 실전 투자 
     }},
     {{
       "title": "투자 전에 확인할 사항",
-      "description": "실제 투자 전에 고려해야 할 중요한 점들을 질문 형태로 제시합니다.",
+      "description": "실제 투자 전에 고려해야 할 중요한 점들을 **질문 형태**로 제시합니다.",
       "type": "question",
       "context": "기초공부하기|투자시작하기|살펴보기|분석하기 중 하나를 선택"
     }}

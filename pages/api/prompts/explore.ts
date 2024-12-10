@@ -20,14 +20,14 @@ export const exploreTemplate = `당신은 ETF 전문가이자 시장 분석가�
   ],
   "nextCards": [
     {{
-      "title": "다음으로 살펴볼 내용",
+      "title": "다음으로 살펴볼 내용과 관련된 질문",
       "description": "검색 결과를 기반으로 추가로 살펴볼 만한 내용을 설명합니다.",
       "type": "action",
       "context": "살펴보기"
     }},
     {{
-      "title": "추가로 확인할 사항",
-      "description": "시장 동향이나 ETF 상품에 대해 더 알아볼 만한 질문을 제시합니다.",
+      "title": "추가로 확인할 사항과 관련된 질문",
+      "description": "시장 동향이나 ETF 상품에 대해 더 알아볼 만한 **질문 형태**를 제시합니다.",
       "type": "question",
       "context": "기초공부하기|투자시작하기|살펴보기|분석하기 중 하나를 선택"
     }}
@@ -39,7 +39,7 @@ export const exploreTemplate = `당신은 ETF 전문가이자 시장 분석가�
 2. **message**는 검색된 자료와 자체 지식을 결합해 초보 투자자에게 친절하고 이해하기 쉬운 문구로 작성(UX Writing).  
 3. **references**는 검색된 정보에서 적합한 자료를 참조하며, 출처를 명확히 표시.  
 4. **relatedTopics**는 검색된 자료를 기반으로 초보자가 추가 학습할 주제를 포함.  
-5. **nextCards**는 검색 결과와 초보 투자 여정을 고려한 행동(action)과 질문(question) 형식으로 작성.
+5. **nextCards**는 검색 결과와 초보 투자 여정을 고려한 행동(action)과 질문(question) 형식으로 작성. 반
    - context는 카드의 성격에 맞게 지정:
      * 기초공부하기: 개념, 용어, 원리 설명이 필요한 경우
      * 투자시작하기: 실제 투자 절차, 방법 안내

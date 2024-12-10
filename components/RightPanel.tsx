@@ -2,30 +2,80 @@ import React, { useEffect, useState } from 'react';
 import { Reference } from '@/types/chat';
 import FadeIn from './FadeIn';
 import Image from 'next/image';
+import InvestmentProgress from './InvestmentProgress';
+
+interface SubTask {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  weight: number;
+}
+
+interface CurrentStep {
+  id: number;
+  title: string;
+  description: string;
+  progress: number;
+  subTasks: SubTask[];
+}
 
 interface RightPanelProps {
   activeSession: string;
   currentReferences: Reference[];
   relatedTopics: string[];
   onTopicClick: (topic: string) => void;
+  currentStep?: CurrentStep;
+  onSubTaskComplete?: (taskId: string, completed: boolean) => void;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
   activeSession, 
   currentReferences, 
   relatedTopics, 
-  onTopicClick 
+  onTopicClick,
+  currentStep,
+  onSubTaskComplete
 }) => {
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    // 세션 스토리지에서 사용자 정보 가져오기
     const userStr = sessionStorage.getItem('currentUser');
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserName(user.name || '');
     }
   }, []);
+
+  // 디버깅용 로그
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.group('RightPanel State');
+      console.log({
+        activeSession,
+        hasCurrentStep: !!currentStep,
+        currentStepDetails: currentStep ? {
+          id: currentStep.id,
+          title: currentStep.title,
+          progress: currentStep.progress,
+          subTasksCount: currentStep.subTasks?.length
+        } : null,
+        shouldShowProgress: activeSession === '투자시작하기' && !!currentStep
+      });
+      console.groupEnd();
+    }
+  }, [activeSession, currentStep]);
+
+  // currentStep이 변경될 때마다 체크
+  useEffect(() => {
+    if (activeSession === '투자시작하기' && currentStep) {
+      console.log('Investment Progress will render with:', {
+        stepId: currentStep.id,
+        progress: currentStep.progress,
+        subTasks: currentStep.subTasks
+      });
+    }
+  }, [activeSession, currentStep]);
 
   if (activeSession === 'home') {
     return (
@@ -72,6 +122,32 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* 디버깅용 로그 */}
+      {console.log('RightPanel rendering conditions:', {
+        activeSession,
+        hasCurrentStep: !!currentStep,
+        shouldShowProgress: activeSession === '투자시작하기' && !!currentStep,
+        currentStepDetails: currentStep ? {
+          id: currentStep.id,
+          title: currentStep.title,
+          subTasksCount: currentStep.subTasks.length
+        } : null
+      })}
+
+      {/* 투자 시작하기 컨텍스트에서 InvestmentProgress 표시 */}
+      {activeSession === '투자시작하기' && currentStep && (
+        <>
+          {console.log('Rendering InvestmentProgress component')}
+          <div className="mb-6 border border-pink-500 p-4 rounded-lg">
+            <InvestmentProgress
+              currentStep={currentStep}
+              onSubTaskComplete={onSubTaskComplete}
+            />
+          </div>
+        </>
+      )}
+
+      {/* 참고자료 섹션 */}
       {currentReferences.length > 0 && (
         <div>
           <h3 className="text-2xl font-bold mb-4 text-gray-200">참고했어요</h3>
@@ -95,6 +171,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         </div>
       )}
 
+      {/* 관련 주제 섹션 */}
       {relatedTopics.length > 0 && (
         <div>
           <h3 className="text-xl font-bold mb-4 text-gray-200">관련 주제</h3>

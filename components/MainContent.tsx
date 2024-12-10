@@ -1,9 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Book, TrendingUp, Search, BarChartIcon as ChartBar } from 'lucide-react';
 import RightPanel from './RightPanel';
-import { Message, Reference } from '@/types/chat';
+import { Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
+
+interface SubTask {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  weight: number;
+}
+
+interface CurrentStep {
+  id: number;
+  title: string;
+  description: string;
+  progress: number;
+  subTasks: SubTask[];
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  context?: string;
+  references?: Reference[];
+  relatedTopics?: string[];
+  nextCards?: any[];
+  currentStep?: CurrentStep;
+}
 
 // 컨텍스트별 호버링 스타일 정의
 const cardStyles = {
@@ -32,17 +58,44 @@ interface MainContentProps {
 }
 
 const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession, setActiveSession }) => {
-  const [sessionMessages, setSessionMessages] = useState<Record<string, Message[]>>({
+  const [sessionMessages, setSessionMessages] = useState<Record<string, ChatMessage[]>>({
     '기초공부하기': [],
     '투자시작하기': [],
     '살펴보기': [],
     '분석하기': []
   });
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentReferences, setCurrentReferences] = useState<Reference[]>([]);
   const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState<CurrentStep | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // 서브태스크 완료 처리
+  const handleSubTaskComplete = (taskId: string, completed: boolean) => {
+    if (!currentStep) return;
+
+    const updatedSubTasks = currentStep.subTasks.map(task =>
+      task.id === taskId ? { ...task, completed } : task
+    );
+
+    // 진행률 계산
+    const totalWeight = updatedSubTasks.reduce((sum, task) => sum + task.weight, 0);
+    const completedWeight = updatedSubTasks
+      .filter(task => task.completed)
+      .reduce((sum, task) => sum + task.weight, 0);
+
+    const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
+
+    const updatedStep = {
+      ...currentStep,
+      subTasks: updatedSubTasks,
+      progress
+    };
+
+    console.log('Updating currentStep:', updatedStep);
+    setCurrentStep(updatedStep);
+  };
 
   useEffect(() => {
     if (activeSession === 'home') {
@@ -68,6 +121,43 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     }, 100);
   };
 
+  const defaultCurrentStep = {
+    id: 1,
+    title: "증권계좌 개설 단계",
+    description: "ETF 투자를 위해서는 먼저 증권계좌를 개설해야 합니다.",
+    progress: 0,
+    subTasks: [
+      {
+        id: "1-1",
+        title: "증권사 비교 및 선택",
+        description: "다양한 증권사를 비교하고 자신에게 맞는 증권사를 선택하세요.",
+        completed: false,
+        weight: 25
+      },
+      {
+        id: "1-2",
+        title: "앱 설치",
+        description: "선택한 증권사의 모바일 거래 앱(MTS)을 스마트폰에 설치하세요.",
+        completed: false,
+        weight: 25
+      },
+      {
+        id: "1-3",
+        title: "신분증 준비",
+        description: "신분증을 준비하고 스마트폰으로 촬영해 두세요.",
+        completed: false,
+        weight: 25
+      },
+      {
+        id: "1-4",
+        title: "계좌 개설 완료",
+        description: "모든 준비가 끝나면 증권사에서 계좌 개설을 완료하세요.",
+        completed: false,
+        weight: 25
+      }
+    ]
+  };
+
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
     
@@ -85,19 +175,16 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       
       const { context } = await contextResponse.json();
       
-      // 홈 화면이거나 컨텍스트가 변경된 경우에만 세션 전환
-      if (activeSession === 'home' || context !== activeSession) {
-        setActiveSession(context);
-        if (activeSession === 'home') {
-          const greeting = cards.find(card => card.title === context)?.greeting || '안녕하세요!';
-          setMessages([{ role: 'assistant', content: greeting }]);
-        }
-      }
+      // 컨텍스트 정규화
+      const normalizedContext = context === '투자 시작하기' ? '투자시작하기' : context;
+      
+      // 세션 전환
+      setActiveSession(normalizedContext);
 
-      const userMessage: Message = { 
+      const userMessage: ChatMessage = { 
         role: 'user',
         content: message,
-        context: context // 감지된 컨텍스트 사용
+        context: normalizedContext
       };
       setMessages(prev => [...prev, userMessage]);
       
@@ -111,21 +198,30 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         body: JSON.stringify({
           message,
           messages: [...messages, userMessage],
-          context: context // 감지된 컨텍스트 사용
+          context: normalizedContext
         }),
       });
 
       if (!response.ok) throw new Error('API 응답 오류');
 
       const data = await response.json();
+      console.log('API Response:', data);
       
-      const aiMessage: Message = {
+      // 투자 시작하기 컨텍스트에서 currentStep 업데이트
+      if (normalizedContext === '투자시작하기') {
+        const step = data.currentStep || defaultCurrentStep;
+        console.log('Setting currentStep:', step);
+        setCurrentStep(step);
+      }
+
+      const aiMessage: ChatMessage = {
         role: 'assistant',
         content: data.message,
         references: data.references || [],
         relatedTopics: data.relatedTopics || [],
         nextCards: data.nextCards || [],
-        context: context // 감지된 컨텍스트 사용
+        context: normalizedContext,
+        currentStep: data.currentStep || defaultCurrentStep
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -134,12 +230,12 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       
       setSessionMessages(prev => ({
         ...prev,
-        [context]: [...(prev[context] || []), userMessage, aiMessage] // 감지된 컨텍스트의 세션에 메시지 저장
+        [normalizedContext]: [...(prev[normalizedContext] || []), userMessage, aiMessage]
       }));
 
     } catch (error) {
       console.error('에러 발생:', error);
-      const errorMessage: Message = { 
+      const errorMessage: ChatMessage = { 
         role: 'assistant', 
         content: '죄송합니다. 오류가 발생했습니다.',
         context: activeSession
@@ -154,6 +250,18 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       setIsLoading(false);
     }
   };
+
+  // 디버깅용 로그
+  useEffect(() => {
+    console.log('MainContent state:', {
+      activeSession,
+      activeSessionType: typeof activeSession,
+      currentStep,
+      context: messages[messages.length - 1]?.context,
+      isInvestmentContext: activeSession === '투자시작하기',
+      lastMessage: messages[messages.length - 1]
+    });
+  }, [activeSession, currentStep, messages]);
 
   const renderContent = () => {
     return (
@@ -260,11 +368,19 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
             {/* Right Panel */}
             <div className="w-80 flex-shrink-0 bg-[#242424] overflow-y-auto">
               <div className="p-6">
+                {console.log('Rendering RightPanel with props:', {
+                  activeSession,
+                  hasCurrentStep: !!currentStep,
+                  currentStep,
+                  context: messages[messages.length - 1]?.context
+                })}
                 <RightPanel 
                   activeSession={activeSession}
                   currentReferences={currentReferences}
                   relatedTopics={relatedTopics}
                   onTopicClick={handleSendMessage}
+                  currentStep={currentStep}
+                  onSubTaskComplete={handleSubTaskComplete}
                 />
               </div>
             </div>

@@ -35,19 +35,23 @@ interface ChatMessage {
 const cardStyles = {
   '기초공부하기': {
     hover: 'hover:bg-[#FFE082] hover:text-gray-800',
-    icon: '📚'
+    icon: '📚',
+    active: 'bg-amber-500/20'
   },
   '투자시작하기': {
     hover: 'hover:bg-[#81C784] hover:text-white',
-    icon: '🎯'
+    icon: '🎯',
+    active: 'bg-green-500/20'
   },
   '살펴보기': {
     hover: 'hover:bg-[#64B5F6] hover:text-white',
-    icon: '🔍'
+    icon: '🔍',
+    active: 'bg-blue-500/20'
   },
   '분석하기': {
     hover: 'hover:bg-[#F48FB1] hover:text-white',
-    icon: '📊'
+    icon: '📊',
+    active: 'bg-pink-500/20'
   }
 };
 
@@ -283,7 +287,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                       className={`
                         relative px-4 py-2 rounded-lg transition-colors flex items-center space-x-2
                         ${activeSession === item.id 
-                          ? 'bg-[#2f2f2f] text-gray-200' 
+                          ? `${cardStyles[item.id as keyof typeof cardStyles].active} text-gray-200` 
                           : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
                         }
                       `}

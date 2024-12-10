@@ -138,7 +138,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
       {activeSession === '투자시작하기' && currentStep && (
         <>
           {console.log('Rendering InvestmentProgress component')}
-          <div className="mb-6 border border-pink-500 p-4 rounded-lg">
+          <div className="mb-6 border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
             <InvestmentProgress
               currentStep={currentStep}
               onSubTaskComplete={onSubTaskComplete}

@@ -1,232 +1,130 @@
-import React, { useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React from 'react';
 import { Message } from '@/types/chat';
-import { ChartBar, Search } from 'lucide-react';
-
-// 컨텍스트별 스타일 정의
-const contextStyles = {
-  '기초공부하기': {
-    icon: '📚',
-    bgColor: 'bg-[#FFE082]',
-    textColor: 'text-gray-800',
-    label: '기초 학습'
-  },
-  '투자시작하기': {
-    icon: '🎯',
-    bgColor: 'bg-[#81C784]',
-    textColor: 'text-white',
-    label: '투자 실행'
-  },
-  '살펴보기': {
-    icon: '🔍',
-    bgColor: 'bg-[#64B5F6]',
-    textColor: 'text-white',
-    label: 'ETF 탐색'
-  },
-  '분석하기': {
-    icon: '📊',
-    bgColor: 'bg-[#F48FB1]',
-    textColor: 'text-white',
-    label: '포트폴리오 분석'
-  }
-};
 
 interface ChatMessagesProps {
   messages: Message[];
   handleSendMessage: (message: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   context: string;
-  isLoading?: boolean;
+  isLoading: boolean;
 }
 
-export const ChatMessages: React.FC<ChatMessagesProps> = ({ 
-  messages, 
-  handleSendMessage, 
-  messagesEndRef,
-  context = '기초공부하기',
-  isLoading = false
-}) => {
-  const animatedMessages = useRef(new Set<string>());
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef(messages.length);
-
-  const messageStyle = contextStyles[context as keyof typeof contextStyles] || contextStyles['기초공부하기'];
-
-  useEffect(() => {
-    // 새로운 메시지가 추가되었고, 그것이 사용자의 메시지일 때만 스크롤
-    if (messages.length > prevMessagesLengthRef.current) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'user') {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-    prevMessagesLengthRef.current = messages.length;
-  }, [messages]);
-
-  useEffect(() => {
-    // 새 메시지가 추가될 때마다 마지막 메시지만 애니메이션 적용
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      const msgKey = `${lastMsg.role}-${messages.length - 1}`;
-      if (!animatedMessages.current.has(msgKey)) {
-        animatedMessages.current.add(msgKey);
-      }
-    }
-  }, [messages]);
-
-  if (messages.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-textOff dark:text-textOffDark">
-      </div>
-    );
+// 컨텍스트별 색상 정의
+const contextColors = {
+  '기초공부하기': {
+    primary: '#FFE082',
+    secondary: '#FFB74D',
+    gradient: 'from-amber-300 to-amber-500'
+  },
+  '투자시작하기': {
+    primary: '#81C784',
+    secondary: '#4CAF50',
+    gradient: 'from-green-400 to-green-600'
+  },
+  '살펴보기': {
+    primary: '#64B5F6',
+    secondary: '#2196F3',
+    gradient: 'from-blue-400 to-blue-600'
+  },
+  '분석하기': {
+    primary: '#F48FB1',
+    secondary: '#E91E63',
+    gradient: 'from-pink-400 to-pink-600'
   }
+};
 
+export const ChatMessages: React.FC<ChatMessagesProps> = ({
+  messages,
+  handleSendMessage,
+  messagesEndRef,
+  context,
+  isLoading
+}) => {
   return (
-    <div 
-      ref={scrollContainerRef}
-      className="flex-1 p-4 space-y-4 overflow-y-auto"
-    >
-      {messages.map((msg, index) => {
-        const msgKey = `${msg.role}-${index}`;
-        const shouldAnimate = index === messages.length - 1;
-        const currentStyle = msg.context ? 
-          contextStyles[msg.context as keyof typeof contextStyles] || contextStyles['기초공부하기'] :
-          messageStyle;
+    <div className="py-4">
+      {messages.map((message, index) => {
+        // 메시지의 컨텍스트에 따른 색상 사용
+        const messageColors = message.context ? 
+          contextColors[message.context as keyof typeof contextColors] : 
+          contextColors[context as keyof typeof contextColors] || {
+            primary: '#9575CD',
+            secondary: '#673AB7',
+            gradient: 'from-purple-400 to-purple-600'
+          };
 
         return (
-          <div key={msgKey} className={`flex flex-col space-y-4 ${shouldAnimate ? 'animate-fadeIn' : ''}`}>
-            <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] p-4 rounded-lg transform transition-all duration-300 ease-in-out ${
-                  msg.role === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : `${currentStyle.bgColor} ${currentStyle.textColor}`
-                }`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className="flex items-center gap-2 mb-2 text-sm font-medium">
-                    <span>{currentStyle.icon}</span>
-                    <span>{currentStyle.label}</span>
-                  </div>
-                )}
-                {msg.content && (
-                  <ReactMarkdown 
-                    className="whitespace-pre-wrap break-words prose dark:prose-invert prose-sm max-w-none"
-                    components={{
-                      code({ children, className, ...props }) {
-                        const isInline = !props.node?.position?.start.line;
-                        return (
-                          <code
-                            className={`${isInline ? 'bg-gray-700 rounded px-1' : 'block bg-gray-700 p-2 rounded'} ${className || ''}`}
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        );
-                      },
-                      a({ children, ...props }) {
-                        return (
-                          <a
-                            className="text-blue-300 hover:text-blue-400 underline"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            {...props}
-                          >
-                            {children}
-                          </a>
-                        );
-                      },
-                      p({ children }) {
-                        return (
-                          <div className="overflow-hidden">
-                            <p className={`whitespace-pre-wrap ${shouldAnimate ? 'animate-slideContent' : ''}`}>
-                              {children}
-                            </p>
-                          </div>
-                        );
-                      }
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                )}
-                {msg.role === 'assistant' && msg.references && msg.references.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">참고 자료:</p>
-                    <div className="space-y-2">
-                      {msg.references.map((ref, refIndex) => (
-                        <div 
-                          key={refIndex} 
-                          className="text-sm bg-gray-200 dark:bg-gray-700 p-2 rounded flex justify-between items-center"
-                        >
-                          <div className="font-medium text-gray-700 dark:text-gray-300">
-                            {ref.title}
-                          </div>
-                          {ref.source && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-300 dark:bg-gray-600 rounded">
-                              {ref.source}
-                            </span>
-                          )}
-                        </div>
-                      ))}
+          <div
+            key={index}
+            className={`mb-4 ${
+              message.role === 'assistant' 
+                ? 'pl-4' 
+                : 'pr-4'
+            }`}
+          >
+            <div className={`flex items-start ${
+              message.role === 'user' ? 'justify-end' : 'space-x-3'
+            }`}>
+              {message.role === 'assistant' && (
+                <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${messageColors.gradient} flex items-center justify-center`}>
+                  <span className="text-white text-sm font-medium">잇삐</span>
+                </div>
+              )}
+              <div className={`${message.role === 'user' ? 'max-w-[60%]' : 'max-w-[75%]'}`}>
+                <div
+                  className={`inline-block rounded-lg p-4 w-full transition-all duration-200 ease-in-out ${
+                    message.role === 'assistant'
+                      ? 'bg-[#2f2f2f] text-gray-200 animate-slideInFromLeft'
+                      : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white animate-slideInFromRight'
+                  }`}
+                >
+                  {message.role === 'assistant' && message.context && (
+                    <div className={`text-xs mb-1 inline-block rounded px-1.5 py-0.5 font-medium
+                      ${message.context === '기초공부하기' ? 'bg-amber-500/20 text-amber-300' : ''}
+                      ${message.context === '투자시작하기' ? 'bg-green-500/20 text-green-300' : ''}
+                      ${message.context === '살펴보기' ? 'bg-blue-500/20 text-blue-300' : ''}
+                      ${message.context === '분석하기' ? 'bg-pink-500/20 text-pink-300' : ''}
+                    `}>
+                      {message.context === '기초공부하기' && '📚 기초 학습'}
+                      {message.context === '투자시작하기' && '🎯 투자 시작'}
+                      {message.context === '살펴보기' && '🔍 시장 조사'}
+                      {message.context === '분석하기' && '📊 투자 분석'}
                     </div>
-                  </div>
-                )}
+                  )}
+                  <pre className="whitespace-pre-wrap font-sans break-words">
+                    {message.content}
+                  </pre>
+                </div>
               </div>
             </div>
-
-            {msg.role === 'assistant' && msg.nextCards && msg.nextCards.length > 0 && (
-              <div className="space-y-2 max-w-3xl mx-auto">
-                {msg.nextCards.map((card, cardIndex) => (
-                  <button
-                    key={cardIndex}
-                    onClick={() => handleSendMessage(card.title)}
-                    className="w-full text-left p-4 rounded-lg bg-white dark:bg-gray-700 
-                             shadow-sm hover:shadow-md transition-shadow 
-                             border border-gray-200 dark:border-gray-600"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-blue-500">
-                        {card.type === 'action' ? <ChartBar size={20} /> : <Search size={20} />}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">
-                          {card.title}
-                        </h4>
-                        {card.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {card.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         );
       })}
       {isLoading && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-lg p-4 bg-[#2f2f2f]">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="pl-4 mb-4">
+          <div className="flex items-start space-x-3">
+            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} flex items-center justify-center animate-fadeIn`}>
+              <span className="text-white text-sm font-medium">잇삐</span>
+            </div>
+            <div className="inline-block rounded-lg p-4 bg-[#2f2f2f] animate-fadeIn">
+              <div className="flex space-x-2">
+                <div 
+                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} animate-bounce`} 
+                  style={{ animationDelay: '0ms' }}
+                />
+                <div 
+                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} animate-bounce`} 
+                  style={{ animationDelay: '150ms' }}
+                />
+                <div 
+                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} animate-bounce`} 
+                  style={{ animationDelay: '300ms' }}
+                />
+              </div>
             </div>
           </div>
         </div>
       )}
-      <div ref={messagesEndRef} className="h-px" />
-      <button
-        onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-        className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-        </svg>
-      </button>
+      <div ref={messagesEndRef} />
     </div>
   );
 }; 

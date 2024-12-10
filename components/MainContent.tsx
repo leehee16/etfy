@@ -390,7 +390,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                             </div>
                             <p className="text-gray-300 group-hover:hidden">ETF 추적오차율</p>
                             <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block">
-                              목표와 실제 성적이 얼마나 다른지 알려주는 숫자에요.
+                              목표와 실제 성적이 얼마나 다른지 알려주는 숫자
                             </p>
                             <div className="flex gap-2 flex-wrap mt-3">
                               <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="주가 변동의 2배 수익을 추구하는 ETF입니다.">레버리지</span>

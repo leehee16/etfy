@@ -158,7 +158,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           >
                             <div className="flex items-center gap-2">
                               <span className="text-lg">
-                                {isQuestion ? '❓' : '➡️'}
+                                {isQuestion ? ' ' : ' '}
                               </span>
                               <h4 className={`text-sm font-medium ${contextClasses.text}`}>
                                 {card.title}
@@ -179,23 +179,22 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       {isLoading && (
         <div className="pl-4 mb-4">
           <div className="flex items-start space-x-3">
-            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} flex items-center justify-center animate-fadeIn`}>
+            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${
+              contextColors[context as keyof typeof contextColors]?.gradient || 'from-purple-400 to-purple-600'
+            } flex items-center justify-center`}>
               <span className="text-white text-sm font-medium">잇삐</span>
             </div>
-            <div className="inline-block rounded-lg p-4 bg-[#2f2f2f] animate-fadeIn">
-              <div className="flex space-x-2">
-                <div 
-                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} animate-bounce`} 
-                  style={{ animationDelay: '0ms' }}
-                />
-                <div 
-                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} animate-bounce`} 
-                  style={{ animationDelay: '150ms' }}
-                />
-                <div 
-                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${contextColors[context as keyof typeof contextColors]?.gradient} animate-bounce`} 
-                  style={{ animationDelay: '300ms' }}
-                />
+            <div className="inline-block rounded-lg p-4 bg-[#2f2f2f] w-[75%]">
+              <div className="space-y-2">
+                <div className={`h-4 rounded animate-pulse ${
+                  contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
+                } opacity-20`} />
+                <div className={`h-4 rounded animate-pulse ${
+                  contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
+                } opacity-20 w-[80%]`} />
+                <div className={`h-4 rounded animate-pulse ${
+                  contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
+                } opacity-20 w-[60%]`} />
               </div>
             </div>
           </div>

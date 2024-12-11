@@ -179,7 +179,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       {isLoading && (
         <div className="pl-4 mb-4">
           <div className="flex items-start space-x-3">
-            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${
+            <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r ${
               contextColors[context as keyof typeof contextColors]?.gradient || 'from-purple-400 to-purple-600'
             } flex items-center justify-center`}>
               <span className="text-white text-sm font-medium">잇삐</span>
@@ -191,10 +191,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 } opacity-20`} />
                 <div className={`h-4 rounded animate-pulse ${
                   contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
-                } opacity-20 w-[80%]`} />
+                } opacity-20`} />
                 <div className={`h-4 rounded animate-pulse ${
                   contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
-                } opacity-20 w-[60%]`} />
+                } opacity-20 w-[80%]`} />
               </div>
             </div>
           </div>

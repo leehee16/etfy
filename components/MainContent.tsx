@@ -60,6 +60,13 @@ const cardStyles = {
     active: 'bg-[#2f2f2f]',
     gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #F9A8D4, #EC4899)',
     dotColor: '#F9A8D4'
+  },
+  '보고서 생성': {
+    hover: 'hover:bg-[#9C27B0] hover:text-white',
+    icon: '📋',
+    active: 'bg-[#2f2f2f]',
+    gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #9C27B0, #673AB7)',
+    dotColor: '#9C27B0'
   }
 };
 
@@ -323,43 +330,54 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     { id: '기초공부하기', icon: <Book size={16} /> },
                     { id: '투자시작하기', icon: <TrendingUp size={16} /> },
                     { id: '살펴보기', icon: <Search size={16} /> },
-                    { id: '분석하기', icon: <ChartBar size={16} /> }
+                    { id: '분석하기', icon: <ChartBar size={16} /> },
+                    {
+                      id: '보고서 생성',
+                      icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <polyline points="13 2 13 9 20 9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    }
                   ].map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveSession(item.id)}
-                      className={`
-                        group relative px-4 py-2 rounded-lg transition-colors flex items-center space-x-2
-                        ${activeSession === item.id 
-                          ? `${cardStyles[item.id as keyof typeof cardStyles].active} text-gray-200 border-2 border-transparent` 
-                          : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
-                        }
-                      `}
-                      style={{
-                        ...(activeSession === item.id ? {
-                          border: '2px solid transparent',
-                          backgroundImage: cardStyles[item.id as keyof typeof cardStyles].gradient,
-                          backgroundOrigin: 'border-box',
-                          backgroundClip: 'padding-box, border-box',
-                          animation: sessionMessages[item.id]?.some(msg => msg.context === item.id) 
-                            ? 'gradient 3s ease infinite'
-                            : 'none'
-                        } : {})
-                      }}
-                    >
-                      <div className="flex items-center space-x-2">
-                        {sessionMessages[item.id]?.some(msg => msg.context === item.id) && (
-                          <div 
-                            className="w-2 h-2 rounded-full"
-                            style={{ 
-                              backgroundColor: cardStyles[item.id as keyof typeof cardStyles].dotColor
-                            }}
-                          />
-                        )}
-                        {item.icon}
-                        <span className="text-sm font-medium">{item.id}</span>
-                      </div>
-                    </button>
+                    <div key={item.id} className="relative">
+                      <button
+                        onClick={() => {
+                          if (item.id === '보고서 생성') {
+                            const completedSessions = Object.values(sessionMessages).filter(messages => messages.length > 0).length;
+                            if (completedSessions === 0) {
+                              alert('먼저 하나 이상의 세션을 완료해주세요.');
+                              return;
+                            }
+                            alert('보고서 생성 기능 준비 중입니다.');
+                            return;
+                          }
+                          setActiveSession(item.id);
+                        }}
+                        className={`
+                          relative px-4 py-2 rounded-lg transition-all duration-300 w-full
+                          ${item.id === '보고서 생성'
+                            ? 'text-white border border-white'
+                            : activeSession === item.id 
+                              ? 'bg-[#2f2f2f] text-gray-200' 
+                              : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
+                          }
+                        `}
+                        style={item.id === '보고서 생성' ? {
+                          borderColor: `rgba(255, 255, 255, ${Object.values(sessionMessages).filter(messages => messages.length > 0).length / 4})`
+                        } : undefined}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {item.id !== '보고서 생성' && sessionMessages[item.id]?.length > 0 && (
+                            <div 
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: cardStyles[item.id as keyof typeof cardStyles].dotColor }}
+                            />
+                          )}
+                          {item.icon}
+                          <span className="text-sm font-medium">{item.id}</span>
+                        </div>
+                      </button>
+                    </div>
                   ))}
                 </nav>
               )}

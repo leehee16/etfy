@@ -109,7 +109,11 @@ module.exports = {
           '0%': { height: '3rem' },
           '50%': { height: '2rem' },
           '100%': { height: '3rem' }
-        }
+        },
+        border: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -123,7 +127,8 @@ module.exports = {
         'chart-line1': 'chart-line1 2s ease-in-out forwards',
         'chart-line2': 'chart-line2 2s ease-in-out forwards',
         'chart-line3': 'chart-line3 2s ease-in-out forwards',
-        'chart-line4': 'chart-line4 2s ease-in-out forwards'
+        'chart-line4': 'chart-line4 2s ease-in-out forwards',
+        border: 'border 4s ease infinite',
       },
       typography: {
         DEFAULT: {

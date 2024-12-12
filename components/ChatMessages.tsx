@@ -1,6 +1,10 @@
 import React from 'react';
 import { Message } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
+import { Pinecone } from '@pinecone-database/pinecone';
+import { PineconeStore } from '@langchain/pinecone';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import OpenAI from 'openai';
 
 interface ChatMessagesProps {
   messages: Message[];

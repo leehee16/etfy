@@ -1,5 +1,5 @@
 import { Pinecone } from '@pinecone-database/pinecone';
-import { PineconeStore } from '@langchain/community/vectorstores/pinecone';
+import { PineconeStore } from '@langchain/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import OpenAI from 'openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
@@ -10,6 +10,10 @@ if (!process.env.PINECONE_API_KEY) {
 
 if (!process.env.PINECONE_INDEX_NAME) {
   throw new Error('PINECONE_INDEX_NAME is not set');
+}
+
+if (!process.env.PINECONE_ENVIRONMENT) {
+  throw new Error('PINECONE_ENVIRONMENT is not set');
 }
 
 if (!process.env.OPENAI_API_KEY) {
@@ -86,7 +90,7 @@ export const embedAndStore = async (documents: {
 }[], chunkOptions?: ChunkOptions) => {
   try {
     const pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY!,
+      apiKey: process.env.PINECONE_API_KEY!
     });
 
     const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
@@ -100,8 +104,6 @@ export const embedAndStore = async (documents: {
       throw new Error(`Index dimension (${indexStats.dimension}) does not match required dimension (${DIMENSION})`);
     }
 
-    const indexNamespace = index.namespace(NAMESPACE);
-
     // 각 문서를 청크로 나누고 임베딩
     const vectors = await Promise.all(
       documents.flatMap(async (doc) => {
@@ -113,26 +115,30 @@ export const embedAndStore = async (documents: {
         const chunks = await splitTextIntoChunks(doc.text, chunkOptions);
         
         // 각 청크를 임베딩
-        return Promise.all(chunks.map(async (chunk, chunkIndex) => ({
-          id: `doc_${Date.now()}_${chunkIndex}`,
-          values: await getEmbedding(chunk),
-          metadata: {
+        return Promise.all(chunks.map(async (chunk, chunkIndex) => {
+          const metadata = {
             text: chunk,
             chunkIndex,
             totalChunks: chunks.length,
             timestamp: new Date().toISOString(),
-            source: doc.metadata.source,
-            ...doc.metadata,
-          },
-        })));
-      }).flat()
+            ...doc.metadata  // 기존 메타데이터를 먼저 spread
+          };
+
+          return {
+            id: `doc_${Date.now()}_${chunkIndex}`,
+            values: await getEmbedding(chunk),
+            metadata
+          };
+        }));
+      })
     );
 
-    // 벡터 업서트
-    await indexNamespace.upsert(vectors);
-    console.log(`${vectors.length}개의 청크가 성공적으로 임베딩되어 저장되었습니다`);
+    // 벡터 업서트 - 중첩 배열을 평탄화
+    const flattenedVectors = vectors.flat();
+    await index.upsert(flattenedVectors);
+    console.log(`${flattenedVectors.length}개의 청크가 성공적으로 임베딩되어 저장되었습니다`);
     
-    return vectors.length;
+    return flattenedVectors.length;
   } catch (error) {
     console.error('문서 임베딩 및 저장 중 오류:', error);
     throw error;
@@ -143,7 +149,7 @@ export const embedAndStore = async (documents: {
 export const initPinecone = async () => {
   try {
     const pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY!,
+      apiKey: process.env.PINECONE_API_KEY!
     });
 
     const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);

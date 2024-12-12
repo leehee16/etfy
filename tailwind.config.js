@@ -114,6 +114,10 @@ module.exports = {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
         },
+        spin: {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -129,6 +133,7 @@ module.exports = {
         'chart-line3': 'chart-line3 2s ease-in-out forwards',
         'chart-line4': 'chart-line4 2s ease-in-out forwards',
         border: 'border 4s ease infinite',
+        'spin': 'spin 8s linear infinite'
       },
       typography: {
         DEFAULT: {

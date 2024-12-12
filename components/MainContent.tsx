@@ -354,19 +354,76 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                           setActiveSession(item.id);
                         }}
                         className={`
-                          relative px-4 py-2 rounded-lg transition-all duration-300 w-full
+                          group relative px-4 py-2 rounded-lg transition-all duration-300 w-full
                           ${item.id === '보고서 생성'
-                            ? 'text-white border border-white'
+                            ? 'text-gray-400 hover:text-gray-300'
                             : activeSession === item.id 
                               ? 'bg-[#2f2f2f] text-gray-200' 
                               : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
                           }
                         `}
-                        style={item.id === '보고서 생성' ? {
-                          borderColor: `rgba(255, 255, 255, ${Object.values(sessionMessages).filter(messages => messages.length > 0).length / 4})`
-                        } : undefined}
                       >
-                        <div className="flex items-center space-x-2">
+                        {item.id === '보고서 생성' && (
+                          <>
+                            <div className="absolute inset-0 rounded-lg overflow-hidden">
+                              <div 
+                                className={`w-[150%] h-[150%] absolute top-[-25%] left-[-25%] ${
+                                  Object.values(sessionMessages).some(messages => messages.length > 0) ? 'animate-spin' : ''
+                                }`}
+                                style={{
+                                  background: Object.values(sessionMessages).some(messages => messages.length > 0)
+                                    ? `conic-gradient(
+                                        from 0deg at 50% 50%,
+                                        transparent 0%,
+                                        ${(() => {
+                                          // 모든 메시지를 배열로 변환
+                                          const allMessages = Object.entries(sessionMessages)
+                                            .flatMap(([context, messages]) => 
+                                              messages.map(() => ({
+                                                context,
+                                                color: cardStyles[context as keyof typeof cardStyles]?.dotColor
+                                              }))
+                                            );
+                                          
+                                          const totalMessages = allMessages.length;
+                                          // 4개 이상이면 360도 채우기
+                                          const totalLength = totalMessages >= 4 ? 100 : 20 + (totalMessages * 10);
+                                          const segmentLength = totalLength / totalMessages;
+
+                                          return allMessages
+                                            .map((msg, index) => {
+                                              const startPercent = index * segmentLength;
+                                              const endPercent = (index + 1) * segmentLength;
+                                              return `${msg.color} ${startPercent}%, ${msg.color} ${endPercent}%`;
+                                            })
+                                            .join(', ');
+                                        })()},
+                                        transparent ${
+                                          Object.values(sessionMessages)
+                                            .reduce((sum, messages) => sum + messages.length, 0) >= 4 
+                                              ? '100' 
+                                              : 20 + (Object.values(sessionMessages)
+                                                  .reduce((sum, messages) => sum + messages.length, 0) * 10)
+                                        }%,
+                                        transparent 100%
+                                      )`
+                                    : 'transparent',
+                                  filter: `blur(${Math.min(15 + (Object.values(sessionMessages)
+                                    .reduce((sum, messages) => sum + messages.length, 0) * 5), 30)}px)`,
+                                  opacity: Math.min(0.7 + (Object.values(sessionMessages)
+                                    .reduce((sum, messages) => sum + messages.length, 0) * 0.1), 1)
+                                }}
+                              />
+                            </div>
+                            <div 
+                              className="absolute inset-[1px] bg-[#242424] rounded-lg"
+                              style={{
+                                background: 'linear-gradient(180deg, rgba(36,36,36,0.9) 0%, rgba(36,36,36,1) 100%)'
+                              }}
+                            />
+                          </>
+                        )}
+                        <div className="relative flex items-center space-x-2">
                           {item.id !== '보고서 생성' && sessionMessages[item.id]?.length > 0 && (
                             <div 
                               className="w-2 h-2 rounded-full"

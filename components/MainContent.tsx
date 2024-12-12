@@ -447,7 +447,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                 <div className="flex-shrink-0 py-8 px-6">
                   <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-200 mb-2">
-                      ETF 투자 도우미
+                      당신의 ETF 투자 파트너
                     </h2>
                     <p className="text-gray-400">
                       무엇을 도와드릴까요?

@@ -91,13 +91,19 @@ const DashboardCard = ({
 }) => (
   <button
     onClick={onClick}
-    className={`group p-6 rounded-lg bg-[#242424] text-gray-200 transition-all duration-300 ease-in-out hover:scale-105 min-h-[200px] w-full ${style.hover}`}
+    className={`
+      group rounded-lg bg-[#242424] text-gray-200 
+      transition-all duration-300 ease-in-out hover:scale-105 
+      h-[200px] w-full flex flex-col p-3 ${style.hover}
+    `}
   >
-    <div className="flex items-center gap-2 mb-4">
+    <div className="flex items-center gap-2 mb-2 h-8">
       <span className="text-2xl">{style.icon}</span>
       <h3 className="text-xl font-bold">{title}</h3>
     </div>
-    {content}
+    <div className="bg-[#2f2f2f] rounded-lg flex-1 w-[263px]">
+      {content}
+    </div>
   </button>
 );
 
@@ -320,266 +326,272 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
   const renderContent = () => {
     return (
-      <div className="flex h-screen overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="flex-shrink-0 h-16 bg-[#1f1f1f] border-b border-[#2f2f2f]">
-            <div className="h-full px-6 flex items-center">
-              {activeSession !== 'home' && (
-                <nav className="flex items-center space-x-1">
-                  {[
-                    { id: '기초공부하기', icon: <Book size={16} /> },
-                    { id: '투자시작하기', icon: <TrendingUp size={16} /> },
-                    { id: '살펴보기', icon: <Search size={16} /> },
-                    { id: '분석하기', icon: <ChartBar size={16} /> },
-                    {
-                      id: '보고서 생성',
-                      icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <polyline points="13 2 13 9 20 9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    }
-                  ].map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        onClick={() => {
-                          if (item.id === '보고서 생성') {
-                            const completedSessions = Object.values(sessionMessages).filter(messages => messages.length > 0).length;
-                            if (completedSessions === 0) {
-                              alert('먼저 하나 이상의 세션을 완료해주세요.');
+      <div className="h-full overflow-hidden">
+        <div className="flex h-full">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <header className="flex-shrink-0 h-16 bg-[#1f1f1f] border-b border-[#2f2f2f]">
+              <div className="h-full px-6 flex items-center">
+                {activeSession !== 'home' && (
+                  <nav className="flex items-center space-x-1">
+                    {[
+                      { id: '기초공부하기', icon: <Book size={16} /> },
+                      { id: '투자시작하기', icon: <TrendingUp size={16} /> },
+                      { id: '살펴보기', icon: <Search size={16} /> },
+                      { id: '분석하기', icon: <ChartBar size={16} /> },
+                      {
+                        id: '보고서 생성',
+                        icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="13 2 13 9 20 9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      }
+                    ].map((item) => (
+                      <div key={item.id} className="relative">
+                        <button
+                          onClick={() => {
+                            if (item.id === '보고서 생성') {
+                              const completedSessions = Object.values(sessionMessages).filter(messages => messages.length > 0).length;
+                              if (completedSessions === 0) {
+                                alert('먼저 하나 이상의 세션을 완료해주세요.');
+                                return;
+                              }
+                              alert('보고서 생성 기능 준비 중입니다.');
                               return;
                             }
-                            alert('보고서 생성 기능 준비 중입니다.');
-                            return;
-                          }
-                          setActiveSession(item.id);
-                        }}
-                        className={`
-                          group relative px-4 py-2 rounded-lg transition-all duration-300 w-full
-                          ${item.id === '보고서 생성'
-                            ? 'text-gray-400 hover:text-gray-300'
-                            : activeSession === item.id 
-                              ? 'bg-[#2f2f2f] text-gray-200' 
-                              : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
-                          }
-                        `}
-                      >
-                        {item.id === '보고서 생성' && (
-                          <>
-                            <div className="absolute inset-0 rounded-lg overflow-hidden">
-                              <div 
-                                className={`w-[150%] h-[150%] absolute top-[-25%] left-[-25%] ${
-                                  Object.values(sessionMessages).some(messages => messages.length > 0) ? 'animate-spin' : ''
-                                }`}
-                                style={{
-                                  background: Object.values(sessionMessages).some(messages => messages.length > 0)
-                                    ? `conic-gradient(
-                                        from 0deg at 50% 50%,
-                                        transparent 0%,
-                                        ${(() => {
-                                          // 모든 메시지를 배열로 변환
-                                          const allMessages = Object.entries(sessionMessages)
-                                            .flatMap(([context, messages]) => 
-                                              messages.map(() => ({
-                                                context,
-                                                color: cardStyles[context as keyof typeof cardStyles]?.dotColor
-                                              }))
-                                            );
-                                          
-                                          const totalMessages = allMessages.length;
-                                          // 4개 이상이면 360도 채우기
-                                          const totalLength = totalMessages >= 4 ? 100 : 20 + (totalMessages * 10);
-                                          const segmentLength = totalLength / totalMessages;
+                            setActiveSession(item.id);
+                          }}
+                          className={`
+                            group relative px-4 py-2 rounded-lg transition-all duration-300 w-full
+                            ${item.id === '보고서 생성'
+                              ? 'text-gray-400 hover:text-gray-300'
+                              : activeSession === item.id 
+                                ? 'bg-[#2f2f2f] text-gray-200' 
+                                : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
+                            }
+                          `}
+                        >
+                          {item.id === '보고서 생성' && (
+                            <>
+                              <div className="absolute inset-0 rounded-lg overflow-hidden">
+                                <div 
+                                  className={`w-[150%] h-[150%] absolute top-[-25%] left-[-25%] ${
+                                    Object.values(sessionMessages).some(messages => messages.length > 0) ? 'animate-spin' : ''
+                                  }`}
+                                  style={{
+                                    background: Object.values(sessionMessages).some(messages => messages.length > 0)
+                                      ? `conic-gradient(
+                                          from 0deg at 50% 50%,
+                                          transparent 0%,
+                                          ${(() => {
+                                            // 모든 메시지를 배열로 변환
+                                            const allMessages = Object.entries(sessionMessages)
+                                              .flatMap(([context, messages]) => 
+                                                messages.map(() => ({
+                                                  context,
+                                                  color: cardStyles[context as keyof typeof cardStyles]?.dotColor
+                                                }))
+                                              );
+                                            
+                                            const totalMessages = allMessages.length;
+                                            // 4개 이상이면 360도 채우기
+                                            const totalLength = totalMessages >= 4 ? 100 : 20 + (totalMessages * 10);
+                                            const segmentLength = totalLength / totalMessages;
 
-                                          return allMessages
-                                            .map((msg, index) => {
-                                              const startPercent = index * segmentLength;
-                                              const endPercent = (index + 1) * segmentLength;
-                                              return `${msg.color} ${startPercent}%, ${msg.color} ${endPercent}%`;
-                                            })
-                                            .join(', ');
-                                        })()},
-                                        transparent ${
-                                          Object.values(sessionMessages)
-                                            .reduce((sum, messages) => sum + messages.length, 0) >= 4 
-                                              ? '100' 
-                                              : 20 + (Object.values(sessionMessages)
-                                                  .reduce((sum, messages) => sum + messages.length, 0) * 10)
-                                        }%,
-                                        transparent 100%
-                                      )`
-                                    : 'transparent',
-                                  filter: `blur(${Math.min(15 + (Object.values(sessionMessages)
-                                    .reduce((sum, messages) => sum + messages.length, 0) * 5), 30)}px)`,
-                                  opacity: Math.min(0.7 + (Object.values(sessionMessages)
-                                    .reduce((sum, messages) => sum + messages.length, 0) * 0.1), 1)
+                                            return allMessages
+                                              .map((msg, index) => {
+                                                const startPercent = index * segmentLength;
+                                                const endPercent = (index + 1) * segmentLength;
+                                                return `${msg.color} ${startPercent}%, ${msg.color} ${endPercent}%`;
+                                              })
+                                              .join(', ');
+                                          })()},
+                                          transparent ${
+                                            Object.values(sessionMessages)
+                                              .reduce((sum, messages) => sum + messages.length, 0) >= 4 
+                                                ? '100' 
+                                                : 20 + (Object.values(sessionMessages)
+                                                    .reduce((sum, messages) => sum + messages.length, 0) * 10)
+                                          }%,
+                                          transparent 100%
+                                        )`
+                                      : 'transparent',
+                                    filter: `blur(${Math.min(15 + (Object.values(sessionMessages)
+                                      .reduce((sum, messages) => sum + messages.length, 0) * 5), 30)}px)`,
+                                    opacity: Math.min(0.7 + (Object.values(sessionMessages)
+                                      .reduce((sum, messages) => sum + messages.length, 0) * 0.1), 1)
+                                  }}
+                                />
+                              </div>
+                              <div 
+                                className="absolute inset-[1px] bg-[#242424] rounded-lg"
+                                style={{
+                                  background: 'linear-gradient(180deg, rgba(36,36,36,0.9) 0%, rgba(36,36,36,1) 100%)'
                                 }}
                               />
-                            </div>
-                            <div 
-                              className="absolute inset-[1px] bg-[#242424] rounded-lg"
-                              style={{
-                                background: 'linear-gradient(180deg, rgba(36,36,36,0.9) 0%, rgba(36,36,36,1) 100%)'
-                              }}
-                            />
-                          </>
-                        )}
-                        <div className="relative flex items-center space-x-2">
-                          {item.id !== '보고서 생성' && sessionMessages[item.id]?.length > 0 && (
-                            <div 
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: cardStyles[item.id as keyof typeof cardStyles].dotColor }}
-                            />
+                            </>
                           )}
-                          {item.icon}
-                          <span className="text-sm font-medium">{item.id}</span>
-                        </div>
-                      </button>
-                    </div>
-                  ))}
-                </nav>
-              )}
-            </div>
-          </header>
+                          <div className="relative flex items-center space-x-2">
+                            {item.id !== '보고서 생성' && sessionMessages[item.id]?.length > 0 && (
+                              <div 
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: cardStyles[item.id as keyof typeof cardStyles].dotColor }}
+                              />
+                            )}
+                            {item.icon}
+                            <span className="text-sm font-medium">{item.id}</span>
+                          </div>
+                        </button>
+                      </div>
+                    ))}
+                  </nav>
+                )}
+              </div>
+            </header>
 
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              {activeSession === 'home' && (
-                <div className="flex-shrink-0 py-8 px-6">
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-200 mb-2">
-                      당신의 ETF 투자 파트너
-                    </h2>
-                    <p className="text-gray-400">
-                      무엇을 도와드릴까요?
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                    <DashboardCard
-                      title="기초공부하기"
-                      content={
-                        <div className="space-y-2 animate-fade-in">
-                          <div className="bg-[#2f2f2f] p-3 rounded-lg min-h-[120px]">
-                            <div className="flex items-center gap-2 text-amber-300 mb-3">
-                              <span className="text-xl">📖</span>
-                              <p className="text-sm">최근 학습한 용어</p>
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {activeSession === 'home' && (
+                  <div className="flex-shrink-0 py-6 px-6">
+                    <div className="text-center mb-6">
+                      <h2 className="text-3xl font-bold text-gray-200 mb-2">
+                        당신의 ETF 투자 파트너
+                      </h2>
+                      <p className="text-gray-400">
+                        무엇을 도와드릴까요?
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-6xl mx-auto px-4">
+                      <DashboardCard
+                        title="기초공부하기"
+                        content={
+                          <div className="flex flex-col h-full p-3 w-full">
+                            <div className="flex items-center justify-between text-amber-300 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">📖</span>
+                                <p className="text-xs whitespace-nowrap">최근 학습한 용어</p>
+                              </div>
                             </div>
-                            <p className="text-gray-300 group-hover:hidden">ETF 추적오차율</p>
-                            <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block">
-                              목표와 실제 성적이 얼마나 다른지 알려주는 숫자
-                            </p>
-                            <div className="flex gap-2 flex-wrap mt-3">
-                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="주가 변동의 2배 수익을 추구하는 ETF입니다.">레버리지</span>
-                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="주가 하락 시 수익을 추구하는 ETF입니다.">인버스</span>
-                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="기업의 시가총액 비중에 따라 투자하는 방식입니다.">시총가중</span>
+                            <div className="min-h-[40px] relative">
+                              <p className="text-gray-300 text-sm group-hover:hidden absolute">ETF 추적오차율</p>
+                              <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block absolute">
+                                목표와 실제 성적이 얼마나 다른지 알려주는 숫자
+                              </p>
                             </div>
-                          </div>
-                        </div>
-                      }
-                      icon={<Book size={24} />}
-                      style={cardStyles['기초공부하기']}
-                      onClick={() => handleCardClick('기초공부하기')}
-                    />
-                    <DashboardCard
-                      title="투자시작하기"
-                      content={
-                        <div className="space-y-2 animate-fade-in">
-                          <div className="bg-[#2f2f2f] p-3 rounded-lg min-h-[120px]">
-                            <div className="flex items-center gap-2 text-green-300 mb-3">
-                              <span className="text-xl">💡</span>
-                              <p className="text-sm">새로운 투자 방법</p>
-                            </div>
-                            <p className="text-gray-300 text-sm mb-3">ISA 계좌로 ETF 투자하기</p>
-                            <div className="flex gap-2 flex-wrap">
-                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="증권사 계좌를 만들어요">계좌개설</span>
-                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="투자 성향을 파악해요">투자성향</span>
-                              <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help" title="실제 투자를 시작해요">매매하기</span>
+                            <div className="flex gap-2 mt-auto w-full">
+                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">레버리지</span>
+                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">인버스</span>
+                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">시총가중</span>
                             </div>
                           </div>
-                        </div>
-                      }
-                      icon={<TrendingUp size={24} />}
-                      style={cardStyles['투자시작하기']}
-                      onClick={() => handleCardClick('투자시작하기')}
-                    />
-                    <DashboardCard
-                      title="살펴보기"
-                      content={
-                        <div className="bg-[#2f2f2f] p-3 rounded-lg">
-                          <div className="flex items-center gap-2 text-blue-300 mb-2">
-                            <span className="text-xl">🔥</span>
-                            <p className="text-sm">실시간 HOT</p>
-                          </div>
-                          <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>
-                        </div>
-                      }
-                      icon={<Search size={24} />}
-                      style={cardStyles['살펴보기']}
-                      onClick={() => handleCardClick('살펴보기')}
-                    />
-                    <DashboardCard
-                      title="분석하기"
-                      content={
-                        <div className="space-y-2 animate-fade-in">
-                          <div className="bg-[#2f2f2f] p-3 rounded-lg">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-300">KODEX 200</span>
-                              <span className="text-green-400">+2.0%</span>
+                        }
+                        icon={<Book size={20} />}
+                        style={cardStyles['기초공부하기']}
+                        onClick={() => handleCardClick('기초공부하기')}
+                      />
+                      <DashboardCard
+                        title="투자시작하기"
+                        content={
+                          <div className="flex flex-col h-full p-3 w-full">
+                            <div className="flex items-center justify-between text-green-300 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">💡</span>
+                                <p className="text-xs whitespace-nowrap">새로운 투자 방법</p>
+                              </div>
                             </div>
-                            <div className="relative mt-2">
+                            <p className="text-gray-300 text-sm mb-2">ISA 계좌로 ETF 투자하기</p>
+                            <div className="flex gap-2 mt-auto w-full">
+                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">계좌개설</span>
+                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">투자성향</span>
+                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">매매하기</span>
+                            </div>
+                          </div>
+                        }
+                        icon={<TrendingUp size={20} />}
+                        style={cardStyles['투자시작하기']}
+                        onClick={() => handleCardClick('투자시작하기')}
+                      />
+                      <DashboardCard
+                        title="살펴보기"
+                        content={
+                          <div className="flex flex-col h-full p-3 w-full">
+                            <div className="flex items-center justify-between text-blue-300 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">🔥</span>
+                                <p className="text-xs whitespace-nowrap">실시간 HOT</p>
+                              </div>
+                            </div>
+                            <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>
+                          </div>
+                        }
+                        icon={<Search size={20} />}
+                        style={cardStyles['살펴보기']}
+                        onClick={() => handleCardClick('살펴보기')}
+                      />
+                      <DashboardCard
+                        title="분석하기"
+                        content={
+                          <div className="flex flex-col h-full p-3 w-full">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs text-gray-300">KODEX 200</span>
+                              <span className="text-xs text-green-400">+2.0%</span>
+                            </div>
+                            <div className="flex-1">
                               <SimpleLineChart />
                             </div>
                           </div>
-                        </div>
-                      }
-                      icon={<ChartBar size={24} />}
-                      style={cardStyles['분석하기']}
-                      onClick={() => handleCardClick('분석하기')}
+                        }
+                        icon={<ChartBar size={20} />}
+                        style={cardStyles['분석하기']}
+                        onClick={() => handleCardClick('분석하기')}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Chat Container */}
+                <div className="flex-1 flex flex-col overflow-hidden bg-[#1f1f1f]">
+                  <div className="flex-1 overflow-y-auto px-6">
+                    <ChatMessages 
+                      messages={messages} 
+                      handleSendMessage={handleSendMessage} 
+                      messagesEndRef={messagesEndRef}
+                      context={activeSession}
+                      isLoading={isLoading}
                     />
                   </div>
-                </div>
-              )}
-              
-              {/* Chat Container */}
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[#1f1f1f]">
-                <div className="flex-1 overflow-y-auto px-6">
-                  <ChatMessages 
-                    messages={messages} 
-                    handleSendMessage={handleSendMessage} 
-                    messagesEndRef={messagesEndRef}
-                    context={activeSession}
-                    isLoading={isLoading}
-                  />
-                </div>
-                <div className="flex-shrink-0 p-4 bg-[#1f1f1f]">
-                  <div className="max-w-3xl mx-auto">
-                    <ChatInput 
-                      onSendMessage={handleSendMessage}
-                      placeholder="메시지를 입력하세요..."
-                      disabled={isLoading}
-                      context={activeSession}
-                    />
+                  <div className="flex-shrink-0 p-4 bg-[#1f1f1f] border-t border-[#2f2f2f]">
+                    <div className="max-w-3xl mx-auto">
+                      <ChatInput 
+                        onSendMessage={handleSendMessage}
+                        placeholder="메시지를 입력하세요..."
+                        disabled={isLoading}
+                        context={activeSession}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right Panel */}
-            <div className="w-80 flex-shrink-0 bg-[#242424] overflow-y-auto">
-              <div className="p-6">
-                {console.log('Rendering RightPanel with props:', {
-                  activeSession,
-                  hasCurrentStep: !!currentStep,
-                  currentStep,
-                  context: messages[messages.length - 1]?.context
-                })}
-                <RightPanel 
-                  activeSession={activeSession}
-                  currentReferences={currentReferences}
-                  relatedTopics={relatedTopics}
-                  onTopicClick={handleSendMessage}
-                  currentStep={currentStep}
-                  onSubTaskComplete={handleSubTaskComplete}
-                />
+              {/* Right Panel */}
+              <div className="w-80 flex-shrink-0 bg-[#242424] border-l border-[#2f2f2f] flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
+                  <div className="p-6">
+                    {console.log('Rendering RightPanel with props:', {
+                      activeSession,
+                      hasCurrentStep: !!currentStep,
+                      currentStep,
+                      context: messages[messages.length - 1]?.context
+                    })}
+                    <RightPanel 
+                      activeSession={activeSession}
+                      currentReferences={currentReferences}
+                      relatedTopics={relatedTopics}
+                      onTopicClick={handleSendMessage}
+                      currentStep={currentStep}
+                      onSubTaskComplete={handleSubTaskComplete}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

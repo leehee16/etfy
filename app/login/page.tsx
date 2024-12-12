@@ -1,12 +1,15 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
+import '../../src/styles/auth.css';
 
 interface LoginData {
   id: string;
   password: string;
 }
 
-const Login = () => {
+export default function LoginPage() {
   const router = useRouter();
   const [loginData, setLoginData] = useState<LoginData>({
     id: '',
@@ -32,7 +35,7 @@ const Login = () => {
     if (user) {
       sessionStorage.setItem('currentUser', JSON.stringify(user));
       alert('로그인 성공!');
-      router.push('/main');
+      router.replace('/main');
     } else {
       alert('아이디 또는 비밀번호가 일치하지 않습니다.');
     }
@@ -81,6 +84,4 @@ const Login = () => {
       </form>
     </div>
   );
-};
-
-export default Login; 
+} 

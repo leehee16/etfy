@@ -7,7 +7,13 @@ interface LogoutButtonProps {
 
 const LogoutButton: React.FC<LogoutButtonProps> = ({ isOpen }) => {
   const handleLogout = () => {
+    // 세션 스토리지에서 사용자 정보 제거
     sessionStorage.removeItem('currentUser');
+    
+    // 세션 스토리지 변경 이벤트를 수동으로 발생시킴
+    window.dispatchEvent(new Event('storage'));
+    
+    // 로그인 페이지로 리다이렉트
     window.location.href = '/login';
   };
 

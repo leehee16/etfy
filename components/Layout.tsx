@@ -13,19 +13,19 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#1f1f1f]">
+    <div className="flex h-screen bg-[#1f1f1f] overflow-hidden">
       <Sidebar 
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 
         setActiveSession={setActiveSession}
       />
-      <div className="flex-1">
+      <main className={`fixed top-0 right-0 bottom-0 transition-all duration-300 ${isSidebarOpen ? 'left-64' : 'left-20'}`}>
         <MainContent 
           isSidebarOpen={isSidebarOpen}
           activeSession={activeSession}
           setActiveSession={setActiveSession}
         />
-      </div>
+      </main>
     </div>
   );
 };

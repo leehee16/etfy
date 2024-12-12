@@ -87,7 +87,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       <form onSubmit={handleSubmit} className="relative">
         <div
           className={`
-            flex items-center gap-2 p-2
+            flex items-center
             bg-[#242424] rounded-lg
             border-2 ${contextStyle?.border || 'border-gray-600'}
             context-input-transition
@@ -105,22 +105,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onChange={(e) => setMessage(e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
-            className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder-gray-400"
-          />
-          <button
-            type="submit"
-            disabled={!message.trim() || disabled}
-            className={`
-              p-2 rounded-lg
-              transition-colors duration-300
-              ${message.trim() && !disabled
-                ? 'text-white hover:bg-gray-700'
-                : 'text-gray-500 cursor-not-allowed'
+            className="w-full bg-transparent border-none outline-none text-gray-200 placeholder-gray-400 py-2 px-3 h-9"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (message.trim() && !disabled) {
+                  onSendMessage(message);
+                  setMessage('');
+                }
               }
-            `}
-          >
-            <Send size={20} />
-          </button>
+            }}
+          />
         </div>
       </form>
     </>

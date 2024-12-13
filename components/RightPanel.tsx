@@ -90,7 +90,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         <ul className="space-y-2">
           <li>
             <FadeIn 
-              text={"좋은 하루되세요😀\n\n"} 
+              text={"12월 13일 금요일\n\n"} 
               delay={800}
               className="text-gray-300 hover:text-gray-200 cursor-pointer font-bold text-lg whitespace-pre-line"
             />
@@ -104,7 +104,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           <FadeIn delay={500}>
             <div className="relative">
               <Image 
-                src="/images/valuechain.png" 
+                src="/images/valuechain2.png" 
                 alt="SK하이닉스 밸류체인" 
                 width={500}
                 height={300}
@@ -115,7 +115,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
             </div>
           </FadeIn>
           <div className="space-y-3 mt-4">
-            <h3 className="text-lg font-bold text-gray-200">UNICORN SK하이닉스밸류체인액티브</h3>
+            <h3 className="text-lg font-bold text-gray-200">SK하이닉스밸류체인액티브</h3>
             <div className="flex flex-wrap gap-2">
               <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300">#AI</span>
               <span className="px-2 py-1 bg-[#242424] rounded-full text-xs text-gray-300">#반도체</span>

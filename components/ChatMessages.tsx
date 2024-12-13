@@ -50,7 +50,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   isLoading
 }) => {
   return (
-    <div>
+    <div className="pt-16">
       {messages.map((message, index) => {
         // 메시지의 컨텍스트에 따른 색상 사용
         const messageColors = message.context ? 
@@ -75,13 +75,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
               message.role === 'user' ? 'justify-end' : 'space-x-3'
             }`}>
               {message.role === 'assistant' && (
-                <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${messageColors.gradient} flex items-center justify-center`}>
+                <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${
+                  contextColors[message.context as keyof typeof contextColors]?.gradient || 
+                  contextColors[context as keyof typeof contextColors]?.gradient || 
+                  'from-purple-400 to-purple-600'
+                } flex items-center justify-center`}>
                   <span className="text-white text-sm font-medium">잇삐</span>
                 </div>
               )}
               <div className={`${message.role === 'user' ? 'max-w-[60%]' : 'max-w-[75%]'}`}>
                 <div
-                  className={`inline-block rounded-lg w-full transition-all duration-200 ease-in-out ${
+                  className={`inline-block rounded-3xl w-full transition-all duration-200 ease-in-out ${
                     message.role === 'assistant'
                       ? 'bg-[#2f2f2f] text-gray-200 animate-slideInFromLeft p-4'
                       : `${messageColors.bg} text-white animate-slideInFromRight py-2 px-4 opacity-80`
@@ -158,7 +162,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           <button
                             key={idx}
                             onClick={() => handleSendMessage(cleanMessage(card.title))}
-                            className={`p-3 rounded-lg border text-left transition-colors hover:bg-[#2f2f2f] ${contextClasses.border} ${contextClasses.bg}`}
+                            className={`p-3 rounded-lg border text-left transition-all duration-300 
+                              ${contextClasses.border} bg-opacity-20 hover:bg-opacity-40 
+                              ${contextClasses.bg} hover:${contextClasses.bg}`}
                           >
                             <div className="flex items-center gap-2">
                               <span className="text-lg">

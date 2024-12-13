@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Book, TrendingUp, Search, BarChartIcon as ChartBar } from 'lucide-react';
+import { Book, TrendingUp, Search, BarChartIcon as ChartBar, FileText } from 'lucide-react';
 import RightPanel from './RightPanel';
 import { Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
@@ -99,7 +99,7 @@ const DashboardCard = ({
     onMouseLeave={onMouseLeave}
     className={`
       group rounded-lg bg-[#242424] text-gray-200 
-      transition-all duration-300 ease-in-out hover:scale-105 
+      transition-all duration-300 ease-in-out hover:scale-104 
       h-[200px] w-full flex flex-col p-3 ${style?.hover || ''}
     `}
   >
@@ -232,35 +232,32 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setIsLoading(true);
 
     try {
-      // 홈 화면에서는 컨텍스트 감지를 건너뜁니다
-      let normalizedContext = activeSession;
-      
-      if (activeSession !== 'home') {
-        // 컨텍스트 감지
-        const contextResponse = await fetch('/api/detectContext', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
-        });
+      // 컨텍스트 감지 수행
+      const contextResponse = await fetch('/api/detectContext', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
 
-        if (!contextResponse.ok) throw new Error('컨텍스트 감지 실패');
-        
-        const { context } = await contextResponse.json();
-        
-        // 컨텍스트 정규화
-        normalizedContext = context === '투자 시작하기' ? '투자시작하기' : context;
-        
-        // 세션 전환
+      if (!contextResponse.ok) throw new Error('컨텍스트 감지 실패');
+      
+      const { context } = await contextResponse.json();
+      const normalizedContext = context === '투자 시작하기' ? '투자시작하기' : context;
+      
+      // 홈화면이거나 다른 컨텍스트가 감지된 경우 세션 전환
+      if (activeSession === 'home' || normalizedContext !== activeSession) {
         setActiveSession(normalizedContext);
       }
 
-      const userMessage: ChatMessage = { 
+      const userMessage: ChatMessage = {
         role: 'user',
         content: message,
         context: normalizedContext
       };
+
+      // 기존 메시지에 새 메시지 추가
       setMessages(prev => [...prev, userMessage]);
-      
+
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -270,7 +267,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          messages: [...messages, userMessage],
+          messages: messages,
           context: normalizedContext
         }),
       });
@@ -278,12 +275,9 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       if (!response.ok) throw new Error('API 응답 오류');
 
       const data = await response.json();
-      console.log('API Response:', data);
       
-      // 투자 시작하기 컨텍스트에서 currentStep 업데이트
       if (normalizedContext === '투자시작하기') {
         const step = data.currentStep || defaultCurrentStep;
-        console.log('Setting currentStep:', step);
         setCurrentStep(step);
       }
 
@@ -301,6 +295,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       setCurrentReferences(data.references || []);
       setRelatedTopics(data.relatedTopics || []);
       
+      // 세션별 메시지 저장
       setSessionMessages(prev => ({
         ...prev,
         [normalizedContext]: [...(prev[normalizedContext] || []), userMessage, aiMessage]
@@ -317,7 +312,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       
       setSessionMessages(prev => ({
         ...prev,
-        [activeSession]: [...prev[activeSession] || [], errorMessage]
+        [activeSession]: [...(prev[activeSession] || []), errorMessage]
       }));
     } finally {
       setIsLoading(false);
@@ -405,13 +400,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                       { id: '투자시작하기', icon: <TrendingUp size={16} /> },
                       { id: '살펴보기', icon: <Search size={16} /> },
                       { id: '분석하기', icon: <ChartBar size={16} /> },
-                      {
-                        id: '보고서 생성',
-                        icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <polyline points="13 2 13 9 20 9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      }
+                      { id: '보고서 생성', icon: <FileText size={16} /> }
                     ].map((item) => (
                       <div key={item.id} className="relative">
                         <button
@@ -433,7 +422,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                               ? 'text-gray-400 hover:text-gray-300'
                               : activeSession === item.id 
                                 ? 'bg-[#2f2f2f] text-gray-200' 
-                                : 'text-gray-400 hover:text-gray-300 hover:bg-[#242424]'
+                                : 'text-gray-400 hover:text-gray-300'
                             }
                           `}
                         >
@@ -441,7 +430,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                             <>
                               <div className="absolute inset-0 rounded-lg overflow-hidden">
                                 <div 
-                                  className={`w-[150%] h-[150%] absolute top-[-25%] left-[-25%] animate-rotate-border`}
+                                  className="w-[150%] h-[150%] absolute top-[-25%] left-[-25%] animate-rotate-border"
                                   style={{
                                     background: Object.values(sessionMessages).some(messages => messages.length > 0)
                                       ? `conic-gradient(
@@ -497,7 +486,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                             {item.id !== '보고서 생성' && sessionMessages[item.id]?.length > 0 && (
                               <div 
                                 className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: cardStyles[item.id as keyof typeof cardStyles].dotColor }}
+                                style={{ backgroundColor: cardStyles[item.id as keyof typeof cardStyles]?.dotColor }}
                               />
                             )}
                             {item.icon}
@@ -619,7 +608,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                               <div className="flex items-center justify-between text-blue-300 mb-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-lg">🔥</span>
-                                  <p className="text-xs whitespace-nowrap">실시간 HOT</p>
+                                  <p className="text-xs whitespace-nowrap">실간 HOT</p>
                                 </div>
                               </div>
                               <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>

@@ -131,6 +131,10 @@ module.exports = {
         rotateBorder: {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' }
+        },
+        'border-rotate': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' }
         }
       },
       animation: {
@@ -151,7 +155,8 @@ module.exports = {
         'chart-line3': 'chart-line3 2s ease-in-out forwards',
         'chart-line4': 'chart-line4 2s ease-in-out forwards',
         border: 'border 4s ease infinite',
-        'spin': 'spin 8s linear infinite'
+        'spin': 'spin 8s linear infinite',
+        'border-rotate': 'border-rotate 8s linear infinite'
       },
       typography: {
         DEFAULT: {

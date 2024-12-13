@@ -88,7 +88,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div
           className={`
             flex items-center
-            bg-[#242424] rounded-lg
+            bg-[#242424] rounded-3xl
             border-2 ${contextStyle?.border || 'border-gray-600'}
             context-input-transition
             ${isContextChanging ? 'context-input-animation' : ''}

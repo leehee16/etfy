@@ -50,7 +50,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   isLoading
 }) => {
   return (
-    <div className="py-4">
+    <div>
       {messages.map((message, index) => {
         // 메시지의 컨텍스트에 따른 색상 사용
         const messageColors = message.context ? 

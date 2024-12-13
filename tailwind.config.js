@@ -66,6 +66,16 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        'gradient-xy': {
+          '0%, 100%': {
+            'background-size': '400% 400%',
+            'background-position': 'left center'
+          },
+          '50%': {
+            'background-size': '200% 200%',
+            'background-position': 'right center'
+          }
+        },
         slideInFromLeft: {
           '0%': { transform: 'translateX(-10px)', opacity: '0' },
           '100%': { transform: 'translateX(0)', opacity: '1' },
@@ -117,11 +127,19 @@ module.exports = {
         spin: {
           from: { transform: 'rotate(0deg)' },
           to: { transform: 'rotate(360deg)' }
+        },
+        rotateBorder: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' }
         }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        'gradient-xy': 'gradient-xy 15s ease infinite',
+        'spin-slow': 'spin 8s linear infinite',
+        'spin': 'spin 3s linear infinite',
+        'rotate-border': 'rotateBorder 8s linear infinite',
         slideInFromLeft: 'slideInFromLeft 0.3s ease-out forwards',
         slideInFromRight: 'slideInFromRight 0.3s ease-out forwards',
         fadeIn: 'fadeIn 0.3s ease-out forwards',

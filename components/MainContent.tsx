@@ -41,28 +41,28 @@ const cardStyles = {
     dotColor: '#FFE082'
   },
   '투자시작하기': {
-    hover: 'hover:bg-[#81C784] hover:text-white',
+    hover: 'hover:bg-[#81C784] hover:text-gray-800',
     icon: '🎯',
     active: 'bg-[#2f2f2f]',
     gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #81C784, #4CAF50)',
     dotColor: '#81C784'
   },
   '살펴보기': {
-    hover: 'hover:bg-[#64B5F6] hover:text-white',
+    hover: 'hover:bg-[#64B5F6] hover:text-gray-800',
     icon: '🔍',
     active: 'bg-[#2f2f2f]',
     gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #64B5F6, #2196F3)',
     dotColor: '#64B5F6'
   },
   '분석하기': {
-    hover: 'hover:bg-[#F48FB1] hover:text-white',
+    hover: 'hover:bg-[#F48FB1] hover:text-gray-800',
     icon: '📊',
     active: 'bg-[#2f2f2f]',
     gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #F9A8D4, #EC4899)',
     dotColor: '#F9A8D4'
   },
   '보고서 생성': {
-    hover: 'hover:bg-[#9C27B0] hover:text-white',
+    hover: 'hover:bg-[#9C27B0] hover:text-gray-800',
     icon: '📋',
     active: 'bg-[#2f2f2f]',
     gradient: 'linear-gradient(#1f1f1f, #1f1f1f), linear-gradient(90deg, #9C27B0, #673AB7)',
@@ -81,27 +81,33 @@ const DashboardCard = ({
   content, 
   icon, 
   style, 
-  onClick 
+  onClick, 
+  onMouseEnter, 
+  onMouseLeave 
 }: { 
   title: string; 
   content: React.ReactNode; 
   icon: React.ReactNode; 
   style: any; 
   onClick: () => void; 
+  onMouseEnter: () => void; 
+  onMouseLeave: () => void; 
 }) => (
   <button
     onClick={onClick}
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
     className={`
       group rounded-lg bg-[#242424] text-gray-200 
       transition-all duration-300 ease-in-out hover:scale-105 
-      h-[200px] w-full flex flex-col p-3 ${style.hover}
+      h-[200px] w-full flex flex-col p-3 ${style?.hover || ''}
     `}
   >
     <div className="flex items-center gap-2 mb-2 h-8">
-      <span className="text-2xl">{style.icon}</span>
+      {icon}
       <h3 className="text-xl font-bold">{title}</h3>
     </div>
-    <div className="bg-[#2f2f2f] rounded-lg flex-1 w-[263px]">
+    <div className="bg-[#2f2f2f] rounded-lg flex-1 w-[280px]">
       {content}
     </div>
   </button>
@@ -131,6 +137,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<CurrentStep | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [hoverColor, setHoverColor] = useState<string | null>(null);
   
   // 서브태스크 완료 처리
   const handleSubTaskComplete = (taskId: string, completed: boolean) => {
@@ -225,22 +232,27 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setIsLoading(true);
 
     try {
-      // 컨텍스트 감지
-      const contextResponse = await fetch('/api/detectContext', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-      });
+      // 홈 화면에서는 컨텍스트 감지를 건너뜁니다
+      let normalizedContext = activeSession;
+      
+      if (activeSession !== 'home') {
+        // 컨텍스트 감지
+        const contextResponse = await fetch('/api/detectContext', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
 
-      if (!contextResponse.ok) throw new Error('컨텍스트 감지 실패');
-      
-      const { context } = await contextResponse.json();
-      
-      // 컨텍스트 정규화
-      const normalizedContext = context === '투자 시작하기' ? '투자시작하기' : context;
-      
-      // 세션 전환
-      setActiveSession(normalizedContext);
+        if (!contextResponse.ok) throw new Error('컨텍스트 감지 실패');
+        
+        const { context } = await contextResponse.json();
+        
+        // 컨텍스트 정규화
+        normalizedContext = context === '투자 시작하기' ? '투자시작하기' : context;
+        
+        // 세션 전환
+        setActiveSession(normalizedContext);
+      }
 
       const userMessage: ChatMessage = { 
         role: 'user',
@@ -324,6 +336,61 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     });
   }, [activeSession, currentStep, messages]);
 
+  const defaultGradient = `conic-gradient(
+    from 90deg at 50% 50%,
+    transparent 0deg,
+    rgba(74, 144, 226, 1) 60deg,
+    rgba(129, 199, 132, 1) 120deg,
+    rgba(255, 224, 130, 1) 180deg,
+    rgba(244, 143, 177, 1) 240deg,
+    transparent 300deg,
+    transparent 360deg
+  )`;
+
+  const blueGradient = `conic-gradient(
+    from 90deg at 50% 50%,
+    transparent 0deg,
+    rgba(74, 144, 226, 1) 60deg,
+    rgba(74, 144, 226, 0.9) 120deg,
+    rgba(74, 144, 226, 0.8) 180deg,
+    rgba(74, 144, 226, 0.7) 240deg,
+    transparent 300deg,
+    transparent 360deg
+  )`;
+
+  const greenGradient = `conic-gradient(
+    from 90deg at 50% 50%,
+    transparent 0deg,
+    rgba(129, 199, 132, 1) 60deg,
+    rgba(129, 199, 132, 0.9) 120deg,
+    rgba(129, 199, 132, 0.8) 180deg,
+    rgba(129, 199, 132, 0.7) 240deg,
+    transparent 300deg,
+    transparent 360deg
+  )`;
+
+  const yellowGradient = `conic-gradient(
+    from 90deg at 50% 50%,
+    transparent 0deg,
+    rgba(255, 224, 130, 1) 60deg,
+    rgba(255, 224, 130, 0.9) 120deg,
+    rgba(255, 224, 130, 0.8) 180deg,
+    rgba(255, 224, 130, 0.7) 240deg,
+    transparent 300deg,
+    transparent 360deg
+  )`;
+
+  const pinkGradient = `conic-gradient(
+    from 90deg at 50% 50%,
+    transparent 0deg,
+    rgba(244, 143, 177, 1) 60deg,
+    rgba(244, 143, 177, 0.9) 120deg,
+    rgba(244, 143, 177, 0.8) 180deg,
+    rgba(244, 143, 177, 0.7) 240deg,
+    transparent 300deg,
+    transparent 360deg
+  )`;
+
   const renderContent = () => {
     return (
       <div className="h-full overflow-hidden">
@@ -374,16 +441,13 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                             <>
                               <div className="absolute inset-0 rounded-lg overflow-hidden">
                                 <div 
-                                  className={`w-[150%] h-[150%] absolute top-[-25%] left-[-25%] ${
-                                    Object.values(sessionMessages).some(messages => messages.length > 0) ? 'animate-spin' : ''
-                                  }`}
+                                  className={`w-[150%] h-[150%] absolute top-[-25%] left-[-25%] animate-rotate-border`}
                                   style={{
                                     background: Object.values(sessionMessages).some(messages => messages.length > 0)
                                       ? `conic-gradient(
                                           from 0deg at 50% 50%,
                                           transparent 0%,
                                           ${(() => {
-                                            // 모든 메시지를 배열로 변환
                                             const allMessages = Object.entries(sessionMessages)
                                               .flatMap(([context, messages]) => 
                                                 messages.map(() => ({
@@ -393,7 +457,6 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                                               );
                                             
                                             const totalMessages = allMessages.length;
-                                            // 4개 이상이면 360도 채우기
                                             const totalLength = totalMessages >= 4 ? 100 : 20 + (totalMessages * 10);
                                             const segmentLength = totalLength / totalMessages;
 
@@ -450,145 +513,182 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {activeSession === 'home' && (
-                  <div className="flex-shrink-0 py-6 px-6">
-                    <div className="text-center mb-6">
-                      <h2 className="text-3xl font-bold text-gray-200 mb-2">
-                        당신의 ETF 투자 파트너
-                      </h2>
-                      <p className="text-gray-400">
-                        무엇을 도와드릴까요?
-                      </p>
+                {activeSession === 'home' ? (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-shrink-0 py-6 px-6">
+                      <div className="text-center mb-6">
+                        <h2 className="text-3xl font-bold text-gray-200 mb-2">
+                          당신의 ETF 투자 파트너
+                        </h2>
+                        <p className="text-gray-400">
+                          무엇을 도와드릴까요?
+                        </p>
+                      </div>
+
+                      <div className="max-w-xl mx-auto mb-6">
+                        <div className="relative">
+                          <div className="absolute inset-0 rounded-lg overflow-hidden">
+                            <div 
+                              className="w-[200%] h-[200%] absolute top-[-50%] left-[-50%]"
+                              style={{
+                                background: hoverColor || defaultGradient,
+                                filter: 'blur(8px)',
+                                opacity: 0.8,
+                                animation: 'spin 8s linear infinite'
+                              }}
+                            />
+                          </div>
+                          <div 
+                            className="absolute inset-[1px] rounded-lg"
+                            style={{
+                              background: 'linear-gradient(180deg, rgba(36,36,36,0.7) 0%, rgba(36,36,36,0.8) 100%)'
+                            }}
+                          />
+                          <div className="relative p-[1px]">
+                            <ChatInput 
+                              onSendMessage={handleSendMessage}
+                              placeholder="ETFy가 도와드릴게요."
+                              disabled={isLoading}
+                              context={activeSession}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 카드 섹션 */}
+                      <div className="grid grid-cols-2 gap-6">
+                        <DashboardCard
+                          title="기초공부하기"
+                          content={
+                            <div className="flex flex-col h-full p-3 w-full">
+                              <div className="flex items-center justify-between text-amber-300 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">📖</span>
+                                  <p className="text-xs whitespace-nowrap">최근 학습한 용어</p>
+                                </div>
+                              </div>
+                              <div className="min-h-[40px] relative">
+                                <p className="text-gray-300 text-sm group-hover:hidden absolute">ETF 추적오차율</p>
+                                <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block absolute">
+                                  목표와 실제 성적이 얼마나 다른지 알려주는 숫자
+                                </p>
+                              </div>
+                              <div className="flex gap-2 mt-auto w-full">
+                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">레버리지</span>
+                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">인버스</span>
+                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">시총가중</span>
+                              </div>
+                            </div>
+                          }
+                          icon={<Book size={20} />}
+                          style={cardStyles['기초공부하기']}
+                          onClick={() => handleCardClick('기초공부하기')}
+                          onMouseEnter={() => setHoverColor(yellowGradient)}
+                          onMouseLeave={() => setHoverColor(null)}
+                        />
+
+                        <DashboardCard
+                          title="투자시작하기"
+                          content={
+                            <div className="flex flex-col h-full p-3 w-full">
+                              <div className="flex items-center justify-between text-green-300 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">💡</span>
+                                  <p className="text-xs whitespace-nowrap">새로운 투자 방법</p>
+                                </div>
+                              </div>
+                              <p className="text-gray-300 text-sm mb-2">ISA 계좌로 ETF 투자하기</p>
+                              <div className="flex gap-2 mt-auto w-full">
+                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">계좌개설</span>
+                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">투자성향</span>
+                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">매매하기</span>
+                              </div>
+                            </div>
+                          }
+                          icon={<TrendingUp size={20} />}
+                          style={cardStyles['투자시작하기']}
+                          onClick={() => handleCardClick('투자시작하기')}
+                          onMouseEnter={() => setHoverColor(greenGradient)}
+                          onMouseLeave={() => setHoverColor(null)}
+                        />
+
+                        <DashboardCard
+                          title="살펴보기"
+                          content={
+                            <div className="flex flex-col h-full p-3 w-full">
+                              <div className="flex items-center justify-between text-blue-300 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">🔥</span>
+                                  <p className="text-xs whitespace-nowrap">실시간 HOT</p>
+                                </div>
+                              </div>
+                              <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>
+                            </div>
+                          }
+                          icon={<Search size={20} />}
+                          style={cardStyles['살펴보기']}
+                          onClick={() => handleCardClick('살펴보기')}
+                          onMouseEnter={() => setHoverColor(blueGradient)}
+                          onMouseLeave={() => setHoverColor(null)}
+                        />
+
+                        <DashboardCard
+                          title="분석하기"
+                          content={
+                            <div className="flex flex-col h-full p-3 w-full">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-gray-300">KODEX 200</span>
+                                <span className="text-xs text-green-400">+2.0%</span>
+                              </div>
+                              <div className="flex-1">
+                                <SimpleLineChart />
+                              </div>
+                            </div>
+                          }
+                          icon={<ChartBar size={20} />}
+                          style={cardStyles['분석하기']}
+                          onClick={() => handleCardClick('분석하기')}
+                          onMouseEnter={() => setHoverColor(pinkGradient)}
+                          onMouseLeave={() => setHoverColor(null)}
+                        />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-6xl mx-auto px-4">
-                      <DashboardCard
-                        title="기초공부하기"
-                        content={
-                          <div className="flex flex-col h-full p-3 w-full">
-                            <div className="flex items-center justify-between text-amber-300 mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">📖</span>
-                                <p className="text-xs whitespace-nowrap">최근 학습한 용어</p>
-                              </div>
-                            </div>
-                            <div className="min-h-[40px] relative">
-                              <p className="text-gray-300 text-sm group-hover:hidden absolute">ETF 추적오차율</p>
-                              <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block absolute">
-                                목표와 실제 성적이 얼마나 다른지 알려주는 숫자
-                              </p>
-                            </div>
-                            <div className="flex gap-2 mt-auto w-full">
-                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">레버리지</span>
-                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">인버스</span>
-                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">시총가중</span>
-                            </div>
-                          </div>
-                        }
-                        icon={<Book size={20} />}
-                        style={cardStyles['기초공부하기']}
-                        onClick={() => handleCardClick('기초공부하기')}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col overflow-hidden bg-[#1f1f1f]">
+                    <div className="flex-1 overflow-y-auto px-6">
+                      <ChatMessages 
+                        messages={messages} 
+                        handleSendMessage={handleSendMessage} 
+                        messagesEndRef={messagesEndRef}
+                        context={activeSession}
+                        isLoading={isLoading}
                       />
-                      <DashboardCard
-                        title="투자시작하기"
-                        content={
-                          <div className="flex flex-col h-full p-3 w-full">
-                            <div className="flex items-center justify-between text-green-300 mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">💡</span>
-                                <p className="text-xs whitespace-nowrap">새로운 투자 방법</p>
-                              </div>
-                            </div>
-                            <p className="text-gray-300 text-sm mb-2">ISA 계좌로 ETF 투자하기</p>
-                            <div className="flex gap-2 mt-auto w-full">
-                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">계좌개설</span>
-                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">투자성향</span>
-                              <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">매매하기</span>
-                            </div>
-                          </div>
-                        }
-                        icon={<TrendingUp size={20} />}
-                        style={cardStyles['투자시작하기']}
-                        onClick={() => handleCardClick('투자시작하기')}
-                      />
-                      <DashboardCard
-                        title="살펴보기"
-                        content={
-                          <div className="flex flex-col h-full p-3 w-full">
-                            <div className="flex items-center justify-between text-blue-300 mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">🔥</span>
-                                <p className="text-xs whitespace-nowrap">실시간 HOT</p>
-                              </div>
-                            </div>
-                            <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>
-                          </div>
-                        }
-                        icon={<Search size={20} />}
-                        style={cardStyles['살펴보기']}
-                        onClick={() => handleCardClick('살펴보기')}
-                      />
-                      <DashboardCard
-                        title="분석하기"
-                        content={
-                          <div className="flex flex-col h-full p-3 w-full">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-xs text-gray-300">KODEX 200</span>
-                              <span className="text-xs text-green-400">+2.0%</span>
-                            </div>
-                            <div className="flex-1">
-                              <SimpleLineChart />
-                            </div>
-                          </div>
-                        }
-                        icon={<ChartBar size={20} />}
-                        style={cardStyles['분석하기']}
-                        onClick={() => handleCardClick('분석하기')}
-                      />
+                    </div>
+                    <div className="flex-shrink-0 p-4 bg-[#1f1f1f] border-t border-[#2f2f2f]">
+                      <div className="max-w-3xl mx-auto">
+                        <ChatInput 
+                          onSendMessage={handleSendMessage}
+                          placeholder="메시지를 입력하세요..."
+                          disabled={isLoading}
+                          context={activeSession}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
-                
-                {/* Chat Container */}
-                <div className="flex-1 flex flex-col overflow-hidden bg-[#1f1f1f]">
-                  <div className="flex-1 overflow-y-auto px-6">
-                    <ChatMessages 
-                      messages={messages} 
-                      handleSendMessage={handleSendMessage} 
-                      messagesEndRef={messagesEndRef}
-                      context={activeSession}
-                      isLoading={isLoading}
-                    />
-                  </div>
-                  <div className="flex-shrink-0 p-4 bg-[#1f1f1f] border-t border-[#2f2f2f]">
-                    <div className="max-w-3xl mx-auto">
-                      <ChatInput 
-                        onSendMessage={handleSendMessage}
-                        placeholder="메시지를 입력하세요..."
-                        disabled={isLoading}
-                        context={activeSession}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Right Panel */}
+              {/* RightPanel 부분 */}
               <div className="w-80 flex-shrink-0 bg-[#242424] border-l border-[#2f2f2f] flex flex-col overflow-hidden">
                 <div className="flex-1 overflow-y-auto">
                   <div className="p-6">
-                    {console.log('Rendering RightPanel with props:', {
-                      activeSession,
-                      hasCurrentStep: !!currentStep,
-                      currentStep,
-                      context: messages[messages.length - 1]?.context
-                    })}
                     <RightPanel 
                       activeSession={activeSession}
                       currentReferences={currentReferences}
-                      relatedTopics={relatedTopics}
-                      onTopicClick={handleSendMessage}
                       currentStep={currentStep}
-                      onSubTaskComplete={handleSubTaskComplete}
+                      relatedTopics={relatedTopics || []}
+                      onTopicClick={handleSendMessage}
                     />
                   </div>
                 </div>
@@ -596,6 +696,17 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
             </div>
           </div>
         </div>
+
+        <style jsx global>{`
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
       </div>
     );
   };

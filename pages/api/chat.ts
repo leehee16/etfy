@@ -1,11 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChatOpenAI } from "@langchain/openai";
 import { RunnableSequence } from "@langchain/core/runnables";
-import { initVectorStore } from '@/config/vectordb';
 import { Document } from '@langchain/core/documents';
 import { Message } from '@/types/chat';
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { getTemplateByContext } from './prompts';
+import { queryDocuments } from '@/config/vectordb';
 
 // 응답 타입 정의
 interface AIResponse {
@@ -54,7 +54,7 @@ const formatChatHistory = (messages: Message[] = []): string => {
 
 // OpenAI 모델 초기화
 const model = new ChatOpenAI({
-  modelName: 'gpt-4o-mini',
+  modelName: 'gpt-4',
   temperature: 0.7,
   openAIApiKey: process.env.OPENAI_API_KEY,
 });
@@ -67,14 +67,21 @@ const retrieveRelatedDocs = async (query: string): Promise<Document[]> => {
       return [];
     }
     
-    const vectorStore = await initVectorStore();
-    if (!vectorStore) {
-      console.error('벡터 스토어 초기화 실패');
-      return [];
-    }
+    console.log('검색 쿼리:', query);
 
-    const docs = await vectorStore.similaritySearch(query.trim(), 3);
-    return docs;
+    // Pinecone 검색 수행
+    const results = await queryDocuments(query);
+    console.log('검색된 문서:', results.length);
+
+    // Document 형식으로 변환
+    return results.map(result => new Document({
+      pageContent: result.metadata?.text || '',
+      metadata: {
+        source: result.metadata?.source || '',
+        score: result.score
+      }
+    }));
+
   } catch (error) {
     console.error('문서 검색 중 오류:', error);
     return [];
@@ -83,15 +90,22 @@ const retrieveRelatedDocs = async (query: string): Promise<Document[]> => {
 
 // 검색 결과를 참조 형식으로 변환하는 함수
 const transformSearchResults = (results: Document[]): AIResponse['references'] => {
-  return results.map(result => ({
-    title: result.metadata?.title || '관련 문서',
-    description: result.pageContent,
-    source: (result.metadata?.source as string) || '문서 저장소',
-    url: (result.metadata?.url as string) || undefined,
-    imageUrl: (result.metadata?.imageUrl as string) || undefined,
-    timestamp: new Date().toISOString(), // 검색 시점 추가
-    query: result.metadata?.query || '' // 검색 쿼리 추가
-  }));
+  console.log('검색 결과 변환 시작...');
+  const references = results.map(result => {
+    const reference = {
+      title: result.metadata?.title || '관련 문서',
+      description: result.pageContent,
+      source: (result.metadata?.source as string) || '문서 저장소',
+      url: (result.metadata?.url as string) || undefined,
+      imageUrl: (result.metadata?.imageUrl as string) || undefined,
+      timestamp: new Date().toISOString(),
+      query: result.metadata?.query || ''
+    };
+    console.log('변환된 참조:', reference);
+    return reference;
+  });
+  console.log('변환된 참조 수:', references.length);
+  return references;
 };
 
 // 체인 정의
@@ -101,8 +115,11 @@ const chain = RunnableSequence.from([
     message: (input: ChatRequest) => input.message,
     chat_history: (input: ChatRequest) => input.chat_history || '',
     references: async (input: ChatRequest) => {
+      console.log('문서 검색 시작...');
       const docs = await retrieveRelatedDocs(input.message);
+      console.log('검색된 문서:', docs.length);
       const searchResults = transformSearchResults(docs);
+      console.log('변환된 검색 결과:', searchResults);
       return JSON.stringify(searchResults, null, 2);
     }
   },
@@ -232,7 +249,7 @@ export default async function handler(
   try {
     const input = req.body;
     const response = await chain.invoke(input);
-    
+
     return res.status(200).json(response);
   } catch (error) {
     console.error('API 오류:', error);

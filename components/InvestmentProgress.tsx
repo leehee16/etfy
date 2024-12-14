@@ -132,7 +132,6 @@ const InvestmentProgress: React.FC<InvestmentProgressProps> = ({
 
   return (
     <div className="space-y-4">
-      <h3 className={`text-xl font-bold ${themeColors.text}`}>진행 과정이에요.</h3>
       {/* 프로그레스 바 */}
       <div className={`w-full h-2 bg-gray-700 rounded-full ${themeColors.border}`}>
         <div 

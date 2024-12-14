@@ -5,6 +5,43 @@ import { Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 
+const defaultCurrentStep = {
+  id: 1,
+  title: "증권계좌 개설 단계",
+  description: "ETF 투자를 위해서는 먼저 증권계좌를 개설해야 합니다.",
+  progress: 0,
+  subTasks: [
+    {
+      id: "1-1",
+      title: "증권사 비교 및 선택",
+      description: "다양한 증권사를 비교하고 자신에게 맞는 증권사를 선택하세요.",
+      completed: false,
+      weight: 25
+    },
+    {
+      id: "1-2",
+      title: "앱 설치",
+      description: "선택한 증권사의 모바일 거래 앱(MTS)을 스마트폰에 설치하세요.",
+      completed: false,
+      weight: 25
+    },
+    {
+      id: "1-3",
+      title: "신분증 준비",
+      description: "신분증을 준비하고 스마트폰으로 촬영해 두세요.",
+      completed: false,
+      weight: 25
+    },
+    {
+      id: "1-4",
+      title: "계좌 개설 완료",
+      description: "모든 준비가 끝나면 증권사에서 계좌 개설을 완료하세요.",
+      completed: false,
+      weight: 25
+    }
+  ]
+};
+
 interface SubTask {
   id: string;
   title: string;
@@ -124,6 +161,16 @@ const SimpleLineChart = () => (
   </div>
 );
 
+interface ChatMessagesProps {
+  messages: ChatMessage[];
+  handleSendMessage: (message: string) => void;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  context: string;
+  isLoading: boolean;
+  onSubTaskComplete: (taskId: string, completed: boolean) => void;
+  onAddSelectedText: (task: SubTask) => void;
+}
+
 const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession, setActiveSession }) => {
   const [sessionMessages, setSessionMessages] = useState<Record<string, ChatMessage[]>>({
     '기초공부하기': [],
@@ -135,34 +182,37 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const [currentReferences, setCurrentReferences] = useState<Reference[]>([]);
   const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<CurrentStep | undefined>();
+  const [currentStep, setCurrentStep] = useState<CurrentStep | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoverColor, setHoverColor] = useState<string | null>(null);
+  const [selectedTexts, setSelectedTexts] = useState<SubTask[]>([]);
   
   // 서브태스크 완료 처리
   const handleSubTaskComplete = (taskId: string, completed: boolean) => {
-    if (!currentStep) return;
-
-    const updatedSubTasks = currentStep.subTasks.map(task =>
+    // 선택한 텍스트 체크박스 처리
+    setSelectedTexts(prev => prev.map(task =>
       task.id === taskId ? { ...task, completed } : task
-    );
+    ));
 
-    // 진행률 계산
-    const totalWeight = updatedSubTasks.reduce((sum, task) => sum + task.weight, 0);
-    const completedWeight = updatedSubTasks
-      .filter(task => task.completed)
-      .reduce((sum, task) => sum + task.weight, 0);
+    // 투자시작하기 컨텍스트의 currentStep 처리
+    if (currentStep) {
+      const updatedSubTasks = currentStep.subTasks.map(task =>
+        task.id === taskId ? { ...task, completed } : task
+      );
 
-    const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
+      const totalWeight = updatedSubTasks.reduce((sum, task) => sum + task.weight, 0);
+      const completedWeight = updatedSubTasks
+        .filter(task => task.completed)
+        .reduce((sum, task) => sum + task.weight, 0);
 
-    const updatedStep = {
-      ...currentStep,
-      subTasks: updatedSubTasks,
-      progress
-    };
+      const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
 
-    console.log('Updating currentStep:', updatedStep);
-    setCurrentStep(updatedStep);
+      setCurrentStep({
+        ...currentStep,
+        subTasks: updatedSubTasks,
+        progress
+      });
+    }
   };
 
   useEffect(() => {
@@ -187,43 +237,6 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
-  };
-
-  const defaultCurrentStep = {
-    id: 1,
-    title: "증권계좌 개설 단계",
-    description: "ETF 투자를 위해서는 먼저 증권계좌를 개설해야 합니다.",
-    progress: 0,
-    subTasks: [
-      {
-        id: "1-1",
-        title: "증권사 비교 및 선택",
-        description: "다양한 증권사를 비교하고 자신에게 맞는 증권사를 선택하세요.",
-        completed: false,
-        weight: 25
-      },
-      {
-        id: "1-2",
-        title: "앱 설치",
-        description: "선택한 증권사의 모바일 거래 앱(MTS)을 스마트폰에 설치하세요.",
-        completed: false,
-        weight: 25
-      },
-      {
-        id: "1-3",
-        title: "신분증 준비",
-        description: "신분증을 준비하고 스마트폰으로 촬영해 두세요.",
-        completed: false,
-        weight: 25
-      },
-      {
-        id: "1-4",
-        title: "계좌 개설 완료",
-        description: "모든 준비가 끝나면 증권사에서 계좌 개설을 완료하세요.",
-        completed: false,
-        weight: 25
-      }
-    ]
   };
 
   const handleSendMessage = async (message: string) => {
@@ -385,6 +398,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     transparent 300deg,
     transparent 360deg
   )`;
+
+  const handleAddSelectedText = (newTask: SubTask) => {
+    setSelectedTexts(prev => [...prev, newTask]);
+  };
 
   const renderContent = () => {
     return (
@@ -652,6 +669,8 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                         messagesEndRef={messagesEndRef}
                         context={activeSession}
                         isLoading={isLoading}
+                        onSubTaskComplete={handleSubTaskComplete}
+                        onAddSelectedText={handleAddSelectedText}
                       />
                     </div>
                     <div className="flex-shrink-0 p-4 bg-[#1f1f1f] border-t border-[#2f2f2f]">
@@ -675,9 +694,11 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     <RightPanel 
                       activeSession={activeSession}
                       currentReferences={currentReferences}
-                      currentStep={currentStep}
-                      relatedTopics={relatedTopics || []}
+                      relatedTopics={relatedTopics}
                       onTopicClick={handleSendMessage}
+                      currentStep={currentStep}
+                      onSubTaskComplete={handleSubTaskComplete}
+                      selectedTexts={selectedTexts}
                     />
                   </div>
                 </div>

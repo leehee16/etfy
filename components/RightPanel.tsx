@@ -3,6 +3,7 @@ import { Reference } from '@/types/chat';
 import FadeIn from './FadeIn';
 import Image from 'next/image';
 import InvestmentProgress from './InvestmentProgress';
+import { Checkbox } from './Checkbox';
 
 interface SubTask {
   id: string;
@@ -20,6 +21,27 @@ interface CurrentStep {
   subTasks: SubTask[];
 }
 
+interface SectorRank {
+  id: string;
+  name: string;
+  change: number;
+  checked: boolean;
+  etfs: {
+    name: string;
+    code: string;
+    change: number;
+  }[];
+}
+
+interface MyETF {
+  name: string;
+  code: string;
+  purchasePrice: number;
+  currentPrice: number;
+  change: number;
+  amount: number;
+}
+
 interface RightPanelProps {
   activeSession: string;
   currentReferences: Reference[];
@@ -27,6 +49,7 @@ interface RightPanelProps {
   onTopicClick: (topic: string) => void;
   currentStep?: CurrentStep;
   onSubTaskComplete?: (taskId: string, completed: boolean) => void;
+  selectedTexts?: SubTask[];
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
@@ -35,9 +58,62 @@ const RightPanel: React.FC<RightPanelProps> = ({
   relatedTopics, 
   onTopicClick,
   currentStep,
-  onSubTaskComplete
+  onSubTaskComplete,
+  selectedTexts = []
 }) => {
   const [userName, setUserName] = useState('');
+  const [selectedSector, setSelectedSector] = useState<string | null>(null);
+  const [sectorRanks] = useState<SectorRank[]>([
+    {
+      id: '1',
+      name: '반도체',
+      change: 2.5,
+      checked: false,
+      etfs: [
+        { name: 'KODEX 반도체', code: '305720', change: 2.8 },
+        { name: 'TIGER 반도체', code: '139260', change: 2.3 }
+      ]
+    },
+    {
+      id: '2',
+      name: '2차전지',
+      change: 1.8,
+      checked: false,
+      etfs: [
+        { name: 'KODEX 2차전지산업', code: '305540', change: 1.9 },
+        { name: 'TIGER 2차전지테마', code: '305540', change: 1.7 }
+      ]
+    },
+    {
+      id: '3',
+      name: '바이오',
+      change: -0.5,
+      checked: false,
+      etfs: [
+        { name: 'KODEX 바이오', code: '244580', change: -0.3 },
+        { name: 'TIGER 헬스케어', code: '227910', change: -0.7 }
+      ]
+    }
+  ]);
+
+  const [myETFs] = useState<MyETF[]>([
+    {
+      name: 'KODEX 200',
+      code: '069500',
+      purchasePrice: 35750,
+      currentPrice: 36800,
+      change: 2.94,
+      amount: 10
+    },
+    {
+      name: 'TIGER 차이나전기차',
+      code: '371460',
+      purchasePrice: 12850,
+      currentPrice: 12100,
+      change: -5.84,
+      amount: 20
+    }
+  ]);
 
   useEffect(() => {
     const userStr = sessionStorage.getItem('currentUser');
@@ -143,29 +219,139 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 디버깅용 로그 */}
-      {console.log('RightPanel rendering conditions:', {
-        activeSession,
-        hasCurrentStep: !!currentStep,
-        shouldShowProgress: activeSession === '투자시작하기' && !!currentStep,
-        currentStepDetails: currentStep ? {
-          id: currentStep.id,
-          title: currentStep.title,
-          subTasksCount: currentStep.subTasks.length
-        } : null
-      })}
-
-      {/* 투자 시작하기 컨텍스트에서 InvestmentProgress 표시 */}
-      {activeSession === '투자시작하기' && currentStep && (
-        <>
-          {console.log('Rendering InvestmentProgress component')}
-          <div className="mb-6 border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
-            <InvestmentProgress
-              currentStep={currentStep}
-              onSubTaskComplete={onSubTaskComplete}
-            />
+      {/* 기초공부하기 컨텍스트의 선택한 내용 */}
+      {activeSession === '기초공부하기' && selectedTexts && selectedTexts.length > 0 && (
+        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xl font-bold text-amber-300">또물어봥</h3>
           </div>
-        </>
+          <div className="space-y-3">
+            {selectedTexts.map((task) => (
+              <div key={task.id} className="flex items-start gap-3 p-2 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all">
+                <Checkbox
+                  id={task.id}
+                  checked={task.completed}
+                  onCheckedChange={(checked) => {
+                    onSubTaskComplete?.(task.id, checked);
+                  }}
+                  className="mt-1 text-amber-300"
+                />
+                <div className="flex-1">
+                  <label
+                    htmlFor={task.id}
+                    className={`text-sm font-medium cursor-pointer ${
+                      task.completed ? 'text-amber-300' : 'text-gray-200'
+                    }`}
+                  >
+                    {task.title}
+                  </label>
+                  {task.description && (
+                    <p className="text-xs text-gray-400 mt-0.5">{task.description}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 투자시작하기 컨텍스트의 진행상황 */}
+      {activeSession === '투자시작하기' && currentStep && (
+        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xl font-bold text-green-300">진행 절차에요</h3>
+          </div>
+          <InvestmentProgress
+            currentStep={currentStep}
+            onSubTaskComplete={onSubTaskComplete}
+          />
+        </div>
+      )}
+
+      {/* 살펴보기 컨텍스트의 섹터 순위 */}
+      {activeSession === '살펴보기' && (
+        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xl font-bold text-blue-300">오늘의 섹터는?</h3>
+          </div>
+          <div className="space-y-3">
+            {sectorRanks.map((sector) => (
+              <div key={sector.id}>
+                <div className="flex items-start gap-3 p-2 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all cursor-pointer"
+                     onClick={() => setSelectedSector(selectedSector === sector.id ? null : sector.id)}>
+                  <Checkbox
+                    id={sector.id}
+                    checked={sector.checked}
+                    onCheckedChange={(checked) => {
+                      // 체크박스 상태 변경 처리
+                    }}
+                    className="mt-1 text-blue-300"
+                  />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-200">
+                        {sector.name}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        sector.change > 0 ? 'text-red-400' : 'text-blue-400'
+                      }`}>
+                        {sector.change > 0 ? '+' : ''}{sector.change}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {selectedSector === sector.id && (
+                  <div className="mt-2 ml-8 space-y-2">
+                    {sector.etfs.map((etf, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 rounded-lg bg-[#1f1f1f]/50">
+                        <div className="flex flex-col">
+                          <span className="text-sm text-gray-200">{etf.name}</span>
+                          <span className="text-xs text-gray-400">{etf.code}</span>
+                        </div>
+                        <span className={`text-sm ${
+                          etf.change > 0 ? 'text-red-400' : 'text-blue-400'
+                        }`}>
+                          {etf.change > 0 ? '+' : ''}{etf.change}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 분석하기 컨텍스트의 내 ETF 목록 */}
+      {activeSession === '분석하기' && (
+        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xl font-bold text-pink-300">내 ETF</h3>
+          </div>
+          <div className="space-y-3">
+            {myETFs.map((etf, index) => (
+              <div key={index} className="p-3 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-200">{etf.name}</span>
+                    <span className="text-xs text-gray-400">{etf.code}</span>
+                  </div>
+                  <span className={`text-sm font-medium ${
+                    etf.change > 0 ? 'text-red-400' : 'text-blue-400'
+                  }`}>
+                    {etf.change > 0 ? '+' : ''}{etf.change}%
+                  </span>
+                </div>
+                <div className="mt-2 flex justify-between text-xs text-gray-400">
+                  <span>보유 {etf.amount}주</span>
+                  <span>평균 {etf.purchasePrice.toLocaleString()}원</span>
+                  <span>현재 {etf.currentPrice.toLocaleString()}원</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* 참고자료 섹션 */}

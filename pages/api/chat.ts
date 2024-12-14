@@ -54,9 +54,11 @@ const formatChatHistory = (messages: Message[] = []): string => {
 
 // OpenAI 모델 초기화
 const model = new ChatOpenAI({
-  modelName: 'gpt-4',
+  modelName: 'gpt-4o',
   temperature: 0.7,
   openAIApiKey: process.env.OPENAI_API_KEY,
+  maxConcurrency: 5,
+  maxRetries: 3,
 });
 
 // 관련 문서 검색 함수
@@ -67,17 +69,16 @@ const retrieveRelatedDocs = async (query: string): Promise<Document[]> => {
       return [];
     }
     
-    console.log('검색 쿼리:', query);
-
-    // Pinecone 검색 수행
+    console.time('문서 검색 시간');
     const results = await queryDocuments(query);
+    console.timeEnd('문서 검색 시간');
     console.log('검색된 문서:', results.length);
 
     // Document 형식으로 변환
     return results.map(result => new Document({
-      pageContent: result.metadata?.text || '',
+      pageContent: String(result.metadata?.text || ''),
       metadata: {
-        source: result.metadata?.source || '',
+        source: String(result.metadata?.source || ''),
         score: result.score
       }
     }));
@@ -115,18 +116,18 @@ const chain = RunnableSequence.from([
     message: (input: ChatRequest) => input.message,
     chat_history: (input: ChatRequest) => input.chat_history || '',
     references: async (input: ChatRequest) => {
-      console.log('문서 검색 시작...');
+      console.time('참조 문서 처리 시간');
       const docs = await retrieveRelatedDocs(input.message);
-      console.log('검색된 문서:', docs.length);
       const searchResults = transformSearchResults(docs);
-      console.log('변환된 검색 결과:', searchResults);
-      return JSON.stringify(searchResults, null, 2);
+      const result = JSON.stringify(searchResults, null, 2);
+      console.timeEnd('참조 문서 처리 시간');
+      return result;
     }
   },
   async (formattedInput) => {
     // 컨텍스트에 따라 다른 프롬프트 템플릿 사용
+    console.time('프롬프트 생성 시간');
     const systemTemplate = getTemplateByContext(formattedInput.context);
-    
     const messages = [
       new SystemMessage(systemTemplate),
       new HumanMessage(
@@ -136,66 +137,54 @@ const chain = RunnableSequence.from([
         `참고 자료: ${formattedInput.references}`
       )
     ];
+    console.timeEnd('프롬프트 생성 시간');
 
+    // GPT 응답 생성
+    console.time('GPT 응답 시간');
     const response = await model.invoke(messages);
+    console.timeEnd('GPT 응답 시간');
+
+    console.time('응답 파싱 시간');
     const contentStr = response.content;
     let cleanedStr = '';
     
     try {
-      // 파서 : 모든 이중 중괄호를 단일 중괄호로 변환
+      // 파서 최적화: 한 번의 정규식으로 처리
       cleanedStr = contentStr.toString()
-        .replace(/\{\{/g, '{')  // 모든 이중 여는 중괄호를 단일로
-        .replace(/\}\}/g, '}')  // 모든 이중 닫는 중괄호를 단일로
+        .replace(/\{+/g, '{')
+        .replace(/\}+/g, '}')
         .trim();
 
-      // 파서 : 첫 번째 { 부터 마지막 } 까지만 추출
       const match = cleanedStr.match(/\{[\s\S]*\}/);
       if (!match) {
         throw new Error('No valid JSON object found');
       }
       cleanedStr = match[0];
       
-      console.log('정리된 JSON 문자열:', cleanedStr);
-      
       const parsed = JSON.parse(cleanedStr);
+      console.timeEnd('응답 파싱 시간');
       
       if (typeof parsed !== 'object' || !parsed.message) {
         throw new Error('Invalid response structure');
       }
 
-      // 타입 안전성을 위한 인터페이스 추가
-      interface Reference {
-        title: string;
-        description: string;
-        source: string;
-        url: string;
-        imageUrl?: string;
-      }
-
-      interface NextCard {
-        title: string;
-        description: string;
-        type: 'action' | 'question';
-      }
-
       return {
         message: parsed.message,
         references: Array.isArray(parsed.references) 
-          ? parsed.references.map((ref: Reference | string) => 
+          ? parsed.references.map((ref: any) => 
               typeof ref === 'string' ? { title: ref } : ref
             )
           : [],
         relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
         nextCards: Array.isArray(parsed.nextCards)
-          ? parsed.nextCards.map((card: NextCard | string) =>
+          ? parsed.nextCards.map((card: any) =>
               typeof card === 'string' ? { title: card, type: 'action' } : card
             )
           : []
       };
     } catch (error) {
       console.error('응답 파싱 실패:', error);
-      console.log('원본 응답:', contentStr);
-      console.log('정리 시도한 문자열:', cleanedStr);
+      console.timeEnd('응답 파싱 시간');
       
       return {
         message: '죄송합니다. 응답을 처리하는 중에 오류가 발생했습니다.',

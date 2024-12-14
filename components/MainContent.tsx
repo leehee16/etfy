@@ -530,7 +530,6 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                           무엇을 도와드릴까요?
                         </p>
                       </div>
-
                       <div className="max-w-xl mx-auto mb-6">
                         <div className="relative">
                           <div className="absolute inset-0 rounded-lg overflow-hidden">

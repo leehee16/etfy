@@ -21,7 +21,11 @@ Object.entries(requiredEnvVars).forEach(([key, value]) => {
 const EMBEDDING_MODEL = 'text-embedding-ada-002';
 const VECTOR_DIMENSION = 1536;
 const BATCH_SIZE = 10; // 한 번에 처리할 문서 수
-const TOP_K = 5; // 검색 결과 개수
+const TOP_K = 3; // 검색 결과 개수 (5에서 3으로 줄임)
+const CACHE_TTL = 1000 * 60 * 5; // 5분
+
+// 캐시 구현
+const cache = new Map<string, { data: any; timestamp: number }>();
 
 // OpenAI 클라이언트
 const openai = new OpenAI({
@@ -33,7 +37,7 @@ const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
 });
 
-// Pinecone 인덱스 초기화
+// Pinecone 인덱스 초기화 (싱글톤)
 let vectorStore: ReturnType<typeof pinecone.index>;
 
 export async function initVectorStore() {
@@ -55,15 +59,25 @@ function convertToAscii(str: string): string {
 }
 
 /**
- * 텍스트로부터 임베딩 벡터 생성
+ * 캐시된 임베딩 생성
  */
 async function createEmbedding(text: string): Promise<number[]> {
+  const cacheKey = `embedding_${text}`;
+  const cached = cache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
   const response = await openai.embeddings.create({
     model: EMBEDDING_MODEL,
     input: text.replace(/\n/g, ' ').trim(),
   });
 
-  return Array.from(response.data[0].embedding);
+  const embedding = Array.from(response.data[0].embedding);
+  cache.set(cacheKey, { data: embedding, timestamp: Date.now() });
+  
+  return embedding;
 }
 
 /**
@@ -129,22 +143,23 @@ export async function storeDocuments(documents: Array<{ text: string; source: st
 }
 
 /**
- * 쿼리와 유사한 문서 검색
+ * 쿼리와 유사한 문서 검색 (성능 최적화)
  */
 export async function queryDocuments(query: string) {
   try {
-    // 1. 쿼리 임베딩 생성
+    console.time('임베딩 생성');
     const queryEmbedding = await createEmbedding(query);
+    console.timeEnd('임베딩 생성');
 
-    // 2. Pinecone 검색
+    console.time('Pinecone 검색');
     const index = await initVectorStore();
     const queryResponse = await index.query({
       vector: queryEmbedding,
       topK: TOP_K,
       includeMetadata: true
     });
+    console.timeEnd('Pinecone 검색');
 
-    // 3. 검색 결과 변환
     return queryResponse.matches.map(match => ({
       score: match.score,
       metadata: match.metadata,

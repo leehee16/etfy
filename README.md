@@ -1,5 +1,5 @@
 # ETF 투자 도우미 AI 챗봇
-
+![logo](https://github.com/leehee16/etfy/issues/1#issuecomment-2556013493)
 ## 프로젝트 소개
 ETF 투자 도우미 AI 플랫폼은 초보 투자자부터 전문 투자자까지 ETF 투자에 필요한 모든 정보와 가이드를 제공하는 종합 플랫폼입니다. AI 기반의 맞춤형 투자 가이드를 통해 사용자의 투자 여정을 함께합니다.
 

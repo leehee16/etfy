@@ -4,6 +4,7 @@ import RightPanel from './RightPanel';
 import { Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
+import dynamic from 'next/dynamic';
 
 const defaultCurrentStep = {
   id: 1,
@@ -170,6 +171,10 @@ interface ChatMessagesProps {
   onSubTaskComplete: (taskId: string, completed: boolean) => void;
   onAddSelectedText: (task: SubTask) => void;
 }
+
+const AdminDashboard = dynamic(() => import('./AdminDashboard'), {
+  ssr: false
+});
 
 const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession, setActiveSession }) => {
   const [sessionMessages, setSessionMessages] = useState<Record<string, ChatMessage[]>>({
@@ -410,7 +415,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
           <div className="flex-1 flex flex-col overflow-hidden">
             <header className="flex-shrink-0 h-16 bg-[#1f1f1f] border-b border-[#2f2f2f]">
               <div className="h-full px-6 flex items-center">
-                {activeSession !== 'home' && (
+                {activeSession !== 'home' && activeSession !== 'admin' && (
                   <nav className="flex items-center space-x-1">
                     {[
                       { id: '기초공부하기', icon: <Book size={16} /> },
@@ -519,7 +524,11 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {activeSession === 'home' ? (
+                {activeSession === 'admin' ? (
+                  <div className="flex-1 overflow-y-auto">
+                    <AdminDashboard />
+                  </div>
+                ) : activeSession === 'home' ? (
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex-shrink-0 py-6 px-6">
                       <div className="text-center mb-6">

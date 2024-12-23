@@ -21,6 +21,31 @@ function Chat() {
   // 초기 메시지 설정
   useEffect(() => {
     const initialMessage = location.state?.initialMessage;
+    const session = location.state?.session;
+
+    // 관리자 페이지 처리
+    if (session === 'admin') {
+      setMessages([{
+        role: 'assistant',
+        content: `
+# 관리자 대시보드
+
+## 데이터 통계
+- 투자성향 테스트: 150회 클릭, 마지막 업데이트 2023-12-23
+- 투자지식 테스트: 120회 클릭, 마지막 업데이트 2023-12-22
+- ETF 퀴즈: 200회 클릭, 마지막 업데이트 2023-12-21
+
+무엇을 도와드릴까요? 다음과 같은 작업이 가능합니다:
+1. 데이터 통계 조회
+2. 사용자 활동 분석
+3. 시스템 상태 확인
+`,
+        status: 'complete',
+        timestamp: Date.now()
+      }]);
+      return;
+    }
+
     if (initialMessage) {
       setMessages([{
         role: 'user',

@@ -408,6 +408,24 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setSelectedTexts(prev => [...prev, newTask]);
   };
 
+  const handleNextCards = (cards: Array<{ title: string; content: string }>) => {
+    // 이미지 분석 결과를 assistant 메시지로 추가
+    const imageAnalysisMessage: ChatMessage = {
+      role: 'assistant',
+      content: '이미지를 분석했습니다. 다음과 같은 질문들을 생성했습니다:',
+      nextCards: cards,
+      context: activeSession
+    };
+
+    setMessages(prev => [...prev, imageAnalysisMessage]);
+    
+    // 세션별 메시지 저장
+    setSessionMessages(prev => ({
+      ...prev,
+      [activeSession]: [...(prev[activeSession] || []), imageAnalysisMessage]
+    }));
+  };
+
   const renderContent = () => {
     return (
       <div className="h-full overflow-hidden">
@@ -564,6 +582,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                               placeholder="ETFy가 도와드릴게요."
                               disabled={isLoading}
                               context={activeSession}
+                              onNextCards={handleNextCards}
                             />
                           </div>
                         </div>
@@ -688,6 +707,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                           placeholder="메시지를 입력하세요..."
                           disabled={isLoading}
                           context={activeSession}
+                          onNextCards={handleNextCards}
                         />
                       </div>
                     </div>

@@ -33,20 +33,21 @@ export default async function handler(
     const base64Image = fs.readFileSync(file.filepath).toString('base64');
 
     const prompt = {
-      instruction: "이미지를 분석하고 관련된 질문들을 생성해주세요.",
+      instruction: "이미지를 자세히 분석하고 설명해주세요. 이미지의 주요 내용을 먼저 설명한 후, 관련된 질문들을 생성해주세요.",
       responseFormat: {
         type: "json",
         structure: {
+          imageDescription: "string",
           questions: ["string"],
           context: "string",
           suggestedTopics: ["string"]
         }
       },
       rules: [
-        "이미지의 주요 요소와 세부사항을 파악하세요",
+        "이미지의 주요 내용과 특징을 아주 쉽게 설명하세요. '해요'체로 끝내서 친근하게 작성하세요",
+        "설명은 객관적이고 명확하게 작성하세요",
         "이미지와 관련된 구체적인 질문을 생성하세요",
-        "질문은 대화를 자연스럽게 이어갈 수 있도록 구성하세요",
-        "이미지의 맥락을 고려하여 관련 주제를 제안하세요"
+        "질문은 대화를 자연스럽게 이어갈 수 있도록 구성하세요"
       ],
       contextEnhancement: [
         "이미지의 시각적 특징을 상세히 설명하세요",
@@ -84,12 +85,13 @@ export default async function handler(
       const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
       analysis = JSON.parse(cleanContent);
       
-      if (!Array.isArray(analysis.questions)) {
-        throw new Error('questions 필드가 배열이 아닙니다');
+      if (!analysis.imageDescription || !Array.isArray(analysis.questions)) {
+        throw new Error('필수 필드가 누락되었습니다');
       }
     } catch (error) {
       console.error('JSON 파싱 오류:', error);
       analysis = {
+        imageDescription: '이미지를 분석하는데 문제가 발생했습니다.',
         questions: ['이 이미지에 대해 어떤 점이 궁금하신가요?'],
         context: '기초공부하기',
         suggestedTopics: ['ETF 기초']
@@ -104,6 +106,7 @@ export default async function handler(
     }));
 
     return res.status(200).json({
+      imageDescription: analysis.imageDescription,
       nextCards,
       context: analysis.context || '기초공부하기',
       suggestedTopics: analysis.suggestedTopics || []

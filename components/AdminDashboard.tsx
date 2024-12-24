@@ -12,7 +12,7 @@ interface EmbeddingData {
   documentSize: string;
 }
 
-const AdminDashboard = () => {
+const AdminDashboard: React.FC = () => {
   // 예시 데이터
   const data: EmbeddingData[] = [
     {

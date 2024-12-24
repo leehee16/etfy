@@ -173,7 +173,8 @@ interface ChatMessagesProps {
 }
 
 const AdminDashboard = dynamic(() => import('./AdminDashboard'), {
-  ssr: false
+  ssr: false,
+  loading: () => <div>Loading...</div>
 });
 
 const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession, setActiveSession }) => {
@@ -238,7 +239,16 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const handleCardClick = (title: string) => {
     setActiveSession(title);
     const greeting = cards.find(card => card.title === title)?.greeting || '안녕하세요!';
-    setMessages([{ role: 'assistant', content: greeting }]);
+    const greetingMessage: ChatMessage = {
+      role: 'assistant',
+      content: greeting,
+      context: title
+    };
+    setMessages([greetingMessage]);
+    setSessionMessages(prev => ({
+      ...prev,
+      [title]: [greetingMessage]
+    }));
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -408,11 +418,11 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setSelectedTexts(prev => [...prev, newTask]);
   };
 
-  const handleNextCards = (cards: Array<{ title: string; content: string }>) => {
+  const handleNextCards = (cards: Array<{ title: string; content: string }>, imageDescription?: string) => {
     // 이미지 분석 결과를 assistant 메시지로 추가
     const imageAnalysisMessage: ChatMessage = {
       role: 'assistant',
-      content: '이미지를 분석했습니다. 다음과 같은 질문들을 생성했습니다:',
+      content: imageDescription || '이미지를 분석하는데 문제가 발생했습니다.',
       nextCards: cards,
       context: activeSession
     };

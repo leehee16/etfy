@@ -52,7 +52,7 @@ interface ChatInputProps {
   placeholder?: string;
   disabled?: boolean;
   context?: string;
-  onNextCards?: (cards: Array<{ title: string; content: string }>) => void;
+  onNextCards?: (cards: Array<{ title: string; content: string }>, imageDescription: string) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -95,7 +95,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
       const formData = new FormData();
       formData.append('image', file);
 
-      // 이미지 분석 요청
       const response = await fetch('/api/analyzeImage', {
         method: 'POST',
         body: formData,
@@ -109,13 +108,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
       // nextCards가 있으면 상위 컴포넌트에 전달
       if (data.nextCards && onNextCards) {
-        onNextCards(data.nextCards);
-      }
-
-      // 첫 번째 질문으로 채팅 프로세스 시작
-      if (data.nextCards?.[0]?.content) {
-        const firstQuestion = data.nextCards[0].content;
-        onSendMessage(firstQuestion);
+        onNextCards(data.nextCards, data.imageDescription);
+        // 첫 번째 질문을 채팅 메시지로 전송
+        if (data.nextCards[0]?.content) {
+          onSendMessage(data.nextCards[0].content);
+        }
       }
 
     } catch (error) {

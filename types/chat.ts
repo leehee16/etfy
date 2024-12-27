@@ -2,14 +2,7 @@ export interface NextCard {
   title: string;
   description: string;
   type: 'action' | 'question';
-}
-
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  references?: Reference[];
-  relatedTopics?: string[];
-  nextCards?: NextCard[];
+  context: '기초공부하기' | '투자시작하기' | '살펴보기' | '분석하기';
 }
 
 export interface Reference {
@@ -17,5 +10,13 @@ export interface Reference {
   description: string;
   source: string;
   url?: string;
-  imageUrl?: string;
+}
+
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  context?: string;
+  references?: Reference[];
+  relatedTopics?: string[];
+  nextCards?: NextCard[];
 } 

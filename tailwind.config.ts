@@ -76,12 +76,17 @@ const config: Config = {
             transform: 'translateX(0)',
             clipPath: 'inset(0 0 0 0)'
           }
+        },
+        borderRotate: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' }
         }
   		},
   		animation: {
   			fadeIn: 'fadeIn 0.5s ease-out forwards',
   			slideUp: 'slideUp 0.3s ease-out forwards',
-        slideContent: 'slideContent 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+        slideContent: 'slideContent 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+        'border-rotate': 'borderRotate 3s linear infinite'
   		}
   	}
   },

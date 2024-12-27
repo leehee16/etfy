@@ -1,189 +1,363 @@
-import React, { useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React, { useState, useEffect } from 'react';
 import { Message } from '@/types/chat';
-import { ChartBar, Search } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { Pinecone } from '@pinecone-database/pinecone';
+import { PineconeStore } from '@langchain/pinecone';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import OpenAI from 'openai';
+
+interface SubTask {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  weight: number;
+}
 
 interface ChatMessagesProps {
   messages: Message[];
   handleSendMessage: (message: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  context: string;
+  isLoading: boolean;
+  onSubTaskComplete: (task: any) => void;
+  onAddSelectedText: (task: SubTask) => void;
 }
 
-export const ChatMessages: React.FC<ChatMessagesProps> = ({ 
-  messages, 
-  handleSendMessage, 
-  messagesEndRef 
-}) => {
-  const animatedMessages = useRef(new Set<string>());
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef(messages.length);
-
-  useEffect(() => {
-    // 새로운 메시지가 추가되었고, 그것이 사용자의 메시지일 때만 스크롤
-    if (messages.length > prevMessagesLengthRef.current) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'user') {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-    prevMessagesLengthRef.current = messages.length;
-  }, [messages]);
-
-  useEffect(() => {
-    // 새 메시지가 추가될 때마다 마지막 메시지만 애니메이션 적용
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      const msgKey = `${lastMsg.role}-${messages.length - 1}`;
-      if (!animatedMessages.current.has(msgKey)) {
-        animatedMessages.current.add(msgKey);
-      }
-    }
-  }, [messages]);
-
-  if (messages.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-textOff dark:text-textOffDark">
-      </div>
-    );
+// 컨텍스트별 색상 정의
+const contextColors = {
+  '기초공부하기': {
+    primary: '#FFE082',
+    secondary: '#FFB74D',
+    gradient: 'from-amber-300 to-amber-500',
+    bg: 'bg-amber-400'
+  },
+  '투자시작하기': {
+    primary: '#81C784',
+    secondary: '#4CAF50',
+    gradient: 'from-green-400 to-green-600',
+    bg: 'bg-green-500'
+  },
+  '살펴보기': {
+    primary: '#64B5F6',
+    secondary: '#2196F3',
+    gradient: 'from-blue-400 to-blue-600',
+    bg: 'bg-blue-500'
+  },
+  '분석하기': {
+    primary: '#F9A8D4',
+    secondary: '#EC4899',
+    gradient: 'from-pink-300 to-pink-500',
+    bg: 'bg-pink-400'
   }
+};
+
+interface SelectableTextProps {
+  children: string;
+  isAssistant?: boolean;
+}
+
+const SelectableText: React.FC<SelectableTextProps> = ({ children, isAssistant }) => {
+  const [isSelected, setIsSelected] = useState(false);
 
   return (
     <div 
-      ref={scrollContainerRef}
-      className="flex-1 p-4 space-y-4 overflow-y-auto"
+      className="relative"
+      onMouseUp={() => {
+        const selection = window.getSelection();
+        setIsSelected(!!selection && selection.toString().length > 0);
+      }}
+      onMouseDown={() => setIsSelected(false)}
     >
-      {messages.map((msg, index) => {
-        const msgKey = `${msg.role}-${index}`;
-        const shouldAnimate = index === messages.length - 1;
+      <style jsx>{`
+        div :global(.selectable) ::selection {
+          background-color: #343541 !important;
+          color: #ECECF1 !important;
+          border-radius: 6px;
+          padding: 2px 4px;
+        }
+      `}</style>
+      <div className={`prose prose-invert max-w-none selectable ${isAssistant ? 'text-gray-200' : 'text-white'}`}>
+        <ReactMarkdown>
+          {children}
+        </ReactMarkdown>
+      </div>
+    </div>
+  );
+};
 
-        return (
-          <div key={msgKey} className={`flex flex-col space-y-4 ${shouldAnimate ? 'animate-fadeIn' : ''}`}>
-            <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] p-4 rounded-lg transform transition-all duration-300 ease-in-out ${
-                  msg.role === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-[#242424] text-gray-200'
-                }`}
-              >
-                {msg.content ? (
-                  <ReactMarkdown 
-                    className="whitespace-pre-wrap break-words prose dark:prose-invert prose-sm max-w-none"
-                    components={{
-                      // 코드 블록 스타일링
-                      code({ node, inline, className, children, ...props }) {
-                        return (
-                          <code
-                            className={`${inline ? 'bg-gray-700 rounded px-1' : 'block bg-gray-700 p-2 rounded'} ${className}`}
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        );
-                      },
-                      // 링크 스타일링
-                      a({ node, className, children, ...props }) {
-                        return (
-                          <a
-                            className="text-blue-300 hover:text-blue-400 underline"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            {...props}
-                          >
-                            {children}
-                          </a>
-                        );
-                      },
-                      // 일반 텍스트 래핑
-                      p({ children }) {
-                        return (
-                          <div className="overflow-hidden">
-                            <p className={`whitespace-pre-wrap ${shouldAnimate ? 'animate-slideContent' : ''}`}>
-                              {children}
-                            </p>
-                          </div>
-                        );
-                      }
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <span>생각중</span>
-                    <span className="flex space-x-1">
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </span>
-                  </span>
-                )}
-                {msg.role === 'assistant' && msg.references && msg.references.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2"></p>
-                    <div className="space-y-2">
-                      {msg.references.map((ref, refIndex) => (
-                        <div 
-                          key={refIndex} 
-                          className="text-sm bg-gray-200 dark:bg-gray-700 p-2 rounded flex justify-between items-center"
-                        >
-                          <div className="font-medium text-gray-700 dark:text-gray-300">
-                            {ref.title}
-                          </div>
-                          {ref.source && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-300 dark:bg-gray-600 rounded">
-                               {ref.source}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+interface SelectionPopupProps {
+  rect: DOMRect;
+  onReply: (text: string) => void;
+  onAddToList: (text: string) => void;
+  context: string;
+}
 
-            {msg.role === 'assistant' && msg.nextCards && msg.nextCards.length > 0 && (
-              <div className="space-y-2 max-w-3xl mx-auto">
-                {msg.nextCards.map((card, cardIndex) => (
-                  <button
-                    key={cardIndex}
-                    onClick={() => handleSendMessage(card.title)}
-                    className="w-full text-left p-4 rounded-lg bg-white dark:bg-gray-700 
-                             shadow-sm hover:shadow-md transition-shadow 
-                             border border-gray-200 dark:border-gray-600"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-blue-500">
-                        {card.type === 'action' ? <ChartBar size={20} /> : <Search size={20} />}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">
-                          {card.title}
-                        </h4>
-                        {card.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {card.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      <div ref={messagesEndRef} className="h-px" />
-      <button
-        onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-        className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+const SelectionPopup: React.FC<SelectionPopupProps> = ({ rect, onReply, onAddToList, context }) => {
+  const selection = window.getSelection();
+  const selectedText = selection?.toString() || '';
+
+  return (
+    <div
+      className="fixed z-50 bg-[#1f1f1f]/95 backdrop-blur-sm text-[#ECECF1] shadow-lg rounded-lg px-2 py-0.5 text-sm transform -translate-x-1/2 flex items-center gap-2"
+      style={{
+        top: Math.max(rect.top + window.scrollY - 45, 10),
+        left: rect.left + (rect.width / 2),
+      }}
+    >
+      <button 
+        onClick={() => onReply(selectedText)}
+        className="hover:bg-[#2f2f2f] rounded-lg px-2 py-0.5 transition-all duration-200 flex items-center gap-1.5 group"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-0.5">
+          <path d="m15 9-6 6"/>
+          <path d="m9 9 6 6"/>
         </svg>
+        <span>응답</span>
+      </button>
+      <button 
+        onClick={() => onAddToList(selectedText)}
+        className="text-amber-300 hover:bg-amber-300/10 rounded-lg px-2 py-0.5 transition-all duration-200 flex items-center gap-1.5 group"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:-translate-y-0.5">
+          <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+        </svg>
+        <span>저장</span>
       </button>
     </div>
+  );
+};
+
+export const ChatMessages: React.FC<ChatMessagesProps> = ({
+  messages,
+  handleSendMessage,
+  messagesEndRef,
+  context,
+  isLoading,
+  onSubTaskComplete,
+  onAddSelectedText
+}) => {
+  const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+
+  const handleMouseUp = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim() !== '') {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      setSelectionRect(rect);
+    } else {
+      setSelectionRect(null);
+    }
+  };
+
+  const handleReply = (text: string) => {
+    handleSendMessage(text);
+    setSelectionRect(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const handleAddToList = (text: string) => {
+    if (onAddSelectedText) {
+      onAddSelectedText({
+        id: `selected-${Date.now()}`,
+        title: text,
+        description: '선택한 텍스트',
+        completed: false,
+        weight: 0
+      });
+    }
+    setSelectionRect(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  useEffect(() => {
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  return (
+    <>
+      <style>
+        {`
+          .message-content ::selection {
+            background-color: rgba(255, 224, 130, 0.3) !important;
+            color: #ECECF1 !important;
+          }
+          .message-content ::-moz-selection {
+            background-color: rgba(255, 224, 130, 0.3) !important;
+            color: #ECECF1 !important;
+          }
+        `}
+      </style>
+      <div className="pt-16">
+        {messages.map((message, index) => {
+          const messageColors = message.context ? 
+            contextColors[message.context as keyof typeof contextColors] : 
+            contextColors[context as keyof typeof contextColors] || {
+              primary: '#9575CD',
+              secondary: '#673AB7',
+              gradient: 'from-purple-400 to-purple-600',
+              bg: 'bg-purple-500'
+            };
+
+          return (
+            <div
+              key={index}
+              className={`mb-4 ${
+                message.role === 'assistant' 
+                  ? 'pl-4' 
+                  : 'pr-4'
+              }`}
+            >
+              <div className={`flex items-start ${
+                message.role === 'user' ? 'justify-end' : 'space-x-3'
+              }`}>
+                {message.role === 'assistant' && (
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r ${
+                    contextColors[message.context as keyof typeof contextColors]?.gradient || 
+                    contextColors[context as keyof typeof contextColors]?.gradient || 
+                    'from-purple-400 to-purple-600'
+                  } flex items-center justify-center`}>
+                    <span className="text-white text-sm font-medium">잇삐</span>
+                  </div>
+                )}
+                <div className={`${message.role === 'user' ? 'max-w-[60%]' : 'max-w-[75%]'}`}>
+                  <div
+                    className={`inline-block rounded-2xl w-full transition-all duration-200 ease-in-out ${
+                      message.role === 'assistant'
+                        ? 'bg-[#2f2f2f] text-gray-200 animate-slideInFromLeft p-4'
+                        : `${messageColors.bg} text-white animate-slideInFromRight py-2 px-4 opacity-80`
+                    }`}
+                  >
+                    {message.role === 'assistant' && message.context && (
+                      <div className={`text-xs mb-1 inline-block rounded px-1.5 py-0.5 font-medium
+                        ${message.context === '기초공부하기' ? 'bg-amber-500/20 text-amber-300' : ''}
+                        ${message.context === '투자시작하기' ? 'bg-green-500/20 text-green-300' : ''}
+                        ${message.context === '살펴보기' ? 'bg-blue-500/20 text-blue-300' : ''}
+                        ${message.context === '분석하기' ? 'bg-pink-500/20 text-pink-300' : ''}
+                      `}>
+                        {message.context === '기초공부하기' && '📚 기초 학습'}
+                        {message.context === '투자시작하기' && '🎯 투자 시작'}
+                        {message.context === '살펴보기' && '🔍 시장 조사'}
+                        {message.context === '분석하기' && '📊 투자 분석'}
+                      </div>
+                    )}
+                    <div className="message-content prose prose-invert max-w-none">
+                      <ReactMarkdown>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                    {message.nextCards && message.nextCards.length > 0 && (
+                      <div className="mt-4 grid gap-2">
+                        {message.nextCards.map((card, idx) => {
+                          const isQuestion = card.type === 'question';
+                          const cardContext = card.context || message.context || context;
+
+                          // 컨텍스트별 스타일 클래스
+                          const getContextClasses = (context: string) => {
+                            switch(context) {
+                              case '기초공부하기':
+                                return {
+                                  border: 'border-amber-500/20',
+                                  bg: 'bg-amber-500/5',
+                                  text: 'text-amber-300'
+                                };
+                              case '투자시작하기':
+                                return {
+                                  border: 'border-green-500/20',
+                                  bg: 'bg-green-500/5',
+                                  text: 'text-green-300'
+                                };
+                              case '살펴보기':
+                                return {
+                                  border: 'border-blue-500/20',
+                                  bg: 'bg-blue-500/5',
+                                  text: 'text-blue-300'
+                                };
+                              case '분석하기':
+                                return {
+                                  border: 'border-pink-500/20',
+                                  bg: 'bg-pink-500/5',
+                                  text: 'text-pink-300'
+                                };
+                              default:
+                                return {
+                                  border: 'border-gray-500/20',
+                                  bg: 'bg-gray-500/5',
+                                  text: 'text-gray-300'
+                                };
+                            }
+                          };
+
+                          const contextClasses = getContextClasses(cardContext);
+
+                          // 메시지 정제 함수
+                          const cleanMessage = (message: string) => {
+                            return message.replace(/^(다음 단계 실행|다음 단계|실행|질문)\s*:\s*/i, '').trim();
+                          };
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleSendMessage(cleanMessage(card.title))}
+                              className={`p-3 rounded-lg border text-left transition-all duration-300 
+                                ${contextClasses.border} bg-opacity-20 hover:bg-opacity-40 
+                                ${contextClasses.bg} hover:${contextClasses.bg}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">
+                                  {isQuestion ? ' ' : ' '}
+                                </span>
+                                <h4 className={`text-sm font-medium ${contextClasses.text}`}>
+                                  {card.title}
+                                </h4>
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1 ml-7">{card.description}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {isLoading && (
+          <div className="pl-4 mb-4">
+            <div className="flex items-start space-x-3">
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r ${
+                contextColors[context as keyof typeof contextColors]?.gradient || 'from-purple-400 to-purple-600'
+              } flex items-center justify-center`}>
+                <span className="text-white text-sm font-medium">잇삐</span>
+              </div>
+              <div className="inline-block rounded-lg p-4 bg-[#2f2f2f] w-[75%]">
+                <div className="space-y-2">
+                  <div className={`h-4 rounded animate-pulse ${
+                    contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
+                  } opacity-20`} />
+                  <div className={`h-4 rounded animate-pulse ${
+                    contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
+                  } opacity-20`} />
+                  <div className={`h-4 rounded animate-pulse ${
+                    contextColors[context as keyof typeof contextColors]?.bg || 'bg-purple-500'
+                  } opacity-20 w-[80%]`} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      {selectionRect && (
+        <SelectionPopup 
+          rect={selectionRect} 
+          onReply={handleReply} 
+          onAddToList={handleAddToList}
+          context={context}
+        />
+      )}
+    </>
   );
 }; 

@@ -11,7 +11,7 @@ export interface CardProps {
 const Card: React.FC<CardProps> = ({ icon, title, description, color, onClick }) => {
   return (
     <button 
-      className={`bg-[#242424] hover:bg-[#2f2f2f] p-6 rounded-lg text-left w-full transition-all duration-300 hover:scale-105 focus:outline-none`}
+      className={`bg-[#242424] hover:bg-[#2f2f2f] p-6 rounded-lg text-left w-full transition-all duration-300 hover:scale-104 focus:outline-none`}
       onClick={onClick}
     >
       <div className="flex items-center mb-4">

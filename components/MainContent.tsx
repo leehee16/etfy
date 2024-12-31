@@ -512,6 +512,80 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setSelectedSectors(sectors);
   };
 
+  const handleGenerateReport = async () => {
+    // 완료된 세션이 있는지 확인
+    const completedSessions = Object.entries(sessionMessages)
+      .filter(([_, messages]) => messages.length > 0);
+
+    if (completedSessions.length === 0) {
+      alert('먼저 하나 이상의 세션을 완료해주세요.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // 세션별 데이터 정리
+      const sessions = Object.fromEntries(
+        completedSessions.map(([context, messages]) => [
+          context,
+          {
+            messages: messages.map(msg => ({
+              role: msg.role,
+              content: msg.content,
+              context: msg.context,
+              selectedTexts: msg.selectedTexts,
+              selectedSectors: msg.selectedSectors,
+              currentStep: msg.currentStep,
+              selectedETFs: msg.selectedETFs
+            })),
+            context
+          }
+        ])
+      );
+
+      const response = await fetch('/api/generateReport', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessions })
+      });
+
+      if (!response.ok) {
+        throw new Error('리포트 생성 실패');
+      }
+
+      const report = await response.json();
+      
+      // 리포트를 새로운 메시지로 추가
+      const reportMessage: ChatMessage = {
+        role: 'assistant',
+        content: `# ${report.title}\n\n` +
+          `## 요약\n${report.summary}\n\n` +
+          report.sections.map(section => 
+            `## ${section.title}\n\n` +
+            `${section.content}\n\n` +
+            `### 추천사항\n${section.recommendations.map(r => `- ${r}`).join('\n')}\n\n` +
+            `### 참고자료\n${section.references.map(r => `- ${r}`).join('\n')}`
+          ).join('\n\n') +
+          `\n\n## 결론\n${report.conclusion}`,
+        context: '보고서 생성'
+      };
+
+      setMessages([reportMessage]);
+      setSessionMessages(prev => ({
+        ...prev,
+        '보고서 생성': [reportMessage]
+      }));
+      setActiveSession('보고서 생성');
+
+    } catch (error) {
+      console.error('리포트 생성 중 오류:', error);
+      alert('리포트 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderContent = () => {
     return (
       <div className="h-full overflow-hidden">
@@ -537,10 +611,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                                 alert('먼저 하나 이상의 세션을 완료해주세요.');
                                 return;
                               }
-                              alert('보고서 생성 기능 준비 중입니다.');
-                              return;
+                              handleGenerateReport();
+                            } else {
+                              setActiveSession(item.id);
                             }
-                            setActiveSession(item.id);
                           }}
                           className={`
                             group relative px-4 py-2 rounded-lg transition-all duration-300 w-full

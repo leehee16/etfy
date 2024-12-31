@@ -3,9 +3,18 @@ import { ChatOpenAI } from "@langchain/openai";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { Document } from '@langchain/core/documents';
 import { Message } from '@/types/chat';
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
 import { getTemplateByContext } from './prompts';
 import { queryDocuments } from '@/config/vectordb';
+import { BufferMemory } from "langchain/memory";
+import { ChatMessageHistory } from "langchain/memory";
+
+// 메모리 초기화
+const memory = new BufferMemory({
+  returnMessages: true,
+  memoryKey: "chat_history",
+  inputKey: "input",
+});
 
 // 응답 타입 정의
 interface AIResponse {
@@ -19,6 +28,8 @@ interface AIResponse {
   }>;
   relatedTopics: string[];
   nextCards: NextCard[];
+  messageId: string;  // 추가: 메시지 ID
+  parentMessageId?: string;  // 추가: 부모 메시지 ID
 }
 
 interface NextCard {
@@ -34,6 +45,44 @@ interface ChatRequest {
   messages?: Message[];
   chat_history?: string;
   references?: string;
+  selectedSectors?: Array<{
+    id: string;
+    name: string;
+    change: number;
+    checked: boolean;
+    etfs: Array<{
+      name: string;
+      code: string;
+      change: number;
+    }>;
+  }>;
+  selectedTexts?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    completed: boolean;
+  }>;
+  currentStep?: {
+    id: number;
+    title: string;
+    description: string;
+    progress: number;
+    subTasks: Array<{
+      id: string;
+      title: string;
+      description: string;
+      completed: boolean;
+      weight: number;
+    }>;
+  };
+  selectedETFs?: Array<{
+    name: string;
+    code: string;
+    purchasePrice: number;
+    currentPrice: number;
+    change: number;
+    amount: number;
+  }>;
 }
 
 // 채팅 기록 포맷팅 함수 수정
@@ -58,7 +107,8 @@ const model = new ChatOpenAI({
   temperature: 0.7,
   openAIApiKey: process.env.OPENAI_API_KEY,
   maxConcurrency: 5,
-  maxRetries: 3,
+  maxRetries: 2,
+  timeout: 30000,  // 30초 타임아웃 설정
 });
 
 // 관련 문서 검색 함수
@@ -69,10 +119,7 @@ const retrieveRelatedDocs = async (query: string): Promise<Document[]> => {
       return [];
     }
     
-    console.time('문서 검색 시간');
-    const results = await queryDocuments(query);
-    console.timeEnd('문서 검색 시간');
-    console.log('검색된 문서:', results.length);
+    const results = await queryDocuments(query, 3);  // 검색 결과 수 제한
 
     // Document 형식으로 변환
     return results.map(result => new Document({
@@ -114,19 +161,64 @@ const chain = RunnableSequence.from([
   {
     context: (input: ChatRequest) => input.context || '',
     message: (input: ChatRequest) => input.message,
-    chat_history: (input: ChatRequest) => input.chat_history || '',
+    chat_history: (input: ChatRequest) => {
+      const recentMessages = input.messages ? 
+        input.messages.slice(-8) : 
+        [];
+      return formatChatHistory(recentMessages);
+    },
     references: async (input: ChatRequest) => {
-      console.time('참조 문서 처리 시간');
       const docs = await retrieveRelatedDocs(input.message);
       const searchResults = transformSearchResults(docs);
-      const result = JSON.stringify(searchResults, null, 2);
-      console.timeEnd('참조 문서 처리 시간');
-      return result;
+      return JSON.stringify(searchResults);
+    },
+    contextInfo: (input: ChatRequest) => {
+      const info = [];
+      
+      // 기초공부하기 컨텍스트의 선택된 텍스트
+      if (input.context === '기초공부하기' && input.selectedTexts?.length > 0) {
+        info.push(`선택된 학습 내용:\n${input.selectedTexts
+          .filter(text => text.completed)
+          .map(text => `- ${text.title}: ${text.description}`)
+          .join('\n')}`);
+      }
+      
+      // 투자시작하기 컨텍스트의 진행 상황
+      if (input.context === '투자시작하기' && input.currentStep) {
+        const completedTasks = input.currentStep.subTasks
+          .filter(task => task.completed)
+          .map(task => `- ${task.title}: ${task.description}`);
+        if (completedTasks.length > 0) {
+          info.push(`현재 진행 상황 (${input.currentStep.title}):\n${completedTasks.join('\n')}`);
+        }
+      }
+      
+      // 살펴보기 컨텍스트의 선택된 섹터
+      if (input.context === '살펴보기' && input.selectedSectors?.length > 0) {
+        const selectedSectorInfo = input.selectedSectors
+          .filter(sector => sector.checked)
+          .map(sector => 
+            `- ${sector.name} (${sector.change > 0 ? '+' : ''}${sector.change}%)\n  ETFs: ${
+              sector.etfs.map(etf => `${etf.name} (${etf.code})`).join(', ')
+            }`
+          );
+        if (selectedSectorInfo.length > 0) {
+          info.push(`선택된 섹터:\n${selectedSectorInfo.join('\n')}`);
+        }
+      }
+      
+      // 분석하기 컨텍스트의 선택된 ETF
+      if (input.context === '분석하기' && input.selectedETFs?.length > 0) {
+        info.push(`선택된 ETF:\n${input.selectedETFs
+          .map(etf => 
+            `- ${etf.name} (${etf.code})\n  보유: ${etf.amount}주, 평균단가: ${etf.purchasePrice.toLocaleString()}원, 현재가: ${etf.currentPrice.toLocaleString()}원 (${etf.change > 0 ? '+' : ''}${etf.change}%)`
+          ).join('\n')}`);
+      }
+      
+      return info.join('\n\n');
     }
   },
   async (formattedInput) => {
-    // 컨텍스트에 따라 다른 프롬프트 템플릿 사용
-    console.time('프롬프트 생성 시간');
     const systemTemplate = getTemplateByContext(formattedInput.context);
     const messages = [
       new SystemMessage(systemTemplate),
@@ -134,23 +226,16 @@ const chain = RunnableSequence.from([
         `상황: ${formattedInput.context}\n` +
         `질문: ${formattedInput.message}\n` +
         `대화 기록: ${formattedInput.chat_history}\n` +
-        `참고 자료: ${formattedInput.references}`
+        `참고 자료: ${formattedInput.references}\n` +
+        (formattedInput.contextInfo ? `${formattedInput.contextInfo}\n` : '')
       )
     ];
-    console.timeEnd('프롬프트 생성 시간');
 
-    // GPT 응답 생성
-    console.time('GPT 응답 시간');
     const response = await model.invoke(messages);
-    console.timeEnd('GPT 응답 시간');
-
-    console.time('응답 파싱 시간');
-    const contentStr = response.content;
-    let cleanedStr = '';
     
     try {
-      // 파서 최적화: 한 번의 정규식으로 처리
-      cleanedStr = contentStr.toString()
+      const contentStr = response.content;
+      const cleanedStr = contentStr.toString()
         .replace(/\{+/g, '{')
         .replace(/\}+/g, '}')
         .trim();
@@ -159,38 +244,23 @@ const chain = RunnableSequence.from([
       if (!match) {
         throw new Error('No valid JSON object found');
       }
-      cleanedStr = match[0];
       
-      const parsed = JSON.parse(cleanedStr);
-      console.timeEnd('응답 파싱 시간');
-      
-      if (typeof parsed !== 'object' || !parsed.message) {
-        throw new Error('Invalid response structure');
-      }
+      const parsed = JSON.parse(match[0]);
+      const messageId = `msg_${Date.now()}`;
 
       return {
-        message: parsed.message,
-        references: Array.isArray(parsed.references) 
-          ? parsed.references.map((ref: any) => 
-              typeof ref === 'string' ? { title: ref } : ref
-            )
-          : [],
-        relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
-        nextCards: Array.isArray(parsed.nextCards)
-          ? parsed.nextCards.map((card: any) =>
-              typeof card === 'string' ? { title: card, type: 'action' } : card
-            )
-          : []
+        ...parsed,
+        messageId,
+        parentMessageId: formattedInput.messageId
       };
     } catch (error) {
       console.error('응답 파싱 실패:', error);
-      console.timeEnd('응답 파싱 시간');
-      
       return {
         message: '죄송합니다. 응답을 처리하는 중에 오류가 발생했습니다.',
         references: [],
         relatedTopics: [],
-        nextCards: []
+        nextCards: [],
+        messageId: `msg_${Date.now()}`
       };
     }
   }
@@ -212,7 +282,9 @@ const processAIResponse = (response: any) => {
       content: parsedResponse.message || parsedResponse.content || '',
       references: Array.isArray(parsedResponse.references) ? parsedResponse.references : [],
       relatedTopics: Array.isArray(parsedResponse.relatedTopics) ? parsedResponse.relatedTopics : [],
-      nextCards: Array.isArray(parsedResponse.nextCards) ? parsedResponse.nextCards : []
+      nextCards: Array.isArray(parsedResponse.nextCards) ? parsedResponse.nextCards : [],
+      messageId: `msg_${Date.now()}`,  // 새 메시지 ID 생성
+      parentMessageId: input.messageId  // 부모 메시지 ID 추적
     };
   } catch (error) {
     console.error('응답 처리 중 오류:', error);
@@ -222,7 +294,9 @@ const processAIResponse = (response: any) => {
       content: String(response),
       references: [],
       relatedTopics: [],
-      nextCards: []
+      nextCards: [],
+      messageId: `msg_${Date.now()}`,  // 새 메시지 ID 생성
+      parentMessageId: input.messageId  // 부모 메시지 ID 추적
     };
   }
 };

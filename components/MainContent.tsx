@@ -67,6 +67,7 @@ interface ChatMessage {
   relatedTopics?: string[];
   nextCards?: any[];
   currentStep?: CurrentStep;
+  selectedSectors?: SectorRank[];
 }
 
 // 컨텍스트별 호버링 스타일 정의
@@ -192,33 +193,60 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoverColor, setHoverColor] = useState<string | null>(null);
   const [selectedTexts, setSelectedTexts] = useState<SubTask[]>([]);
+  const [selectedSectors, setSelectedSectors] = useState<SectorRank[]>([]);
+  const [allInvestmentSteps, setAllInvestmentSteps] = useState<Array<{
+    id: number;
+    title: string;
+    description: string;
+    progress: number;
+    subTasks: Array<{
+      id: string;
+      title: string;
+      description: string;
+      completed: boolean;
+      weight: number;
+    }>;
+  }>>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   
   // 서브태스크 완료 처리
   const handleSubTaskComplete = (taskId: string, completed: boolean) => {
-    // 선택한 텍스트 체크박스 처리
-    setSelectedTexts(prev => prev.map(task =>
+    if (!currentStep || !allInvestmentSteps.length) return;
+
+    // 현재 단계의 서브태스크 업데이트
+    const updatedSubTasks = currentStep.subTasks.map(task =>
       task.id === taskId ? { ...task, completed } : task
-    ));
+    );
 
-    // 투자시작하기 컨텍스트의 currentStep 처리
-    if (currentStep) {
-      const updatedSubTasks = currentStep.subTasks.map(task =>
-        task.id === taskId ? { ...task, completed } : task
-      );
+    // 진행률 계산
+    const totalWeight = updatedSubTasks.reduce((sum, task) => sum + task.weight, 0);
+    const completedWeight = updatedSubTasks
+      .filter(task => task.completed)
+      .reduce((sum, task) => sum + task.weight, 0);
 
-      const totalWeight = updatedSubTasks.reduce((sum, task) => sum + task.weight, 0);
-      const completedWeight = updatedSubTasks
-        .filter(task => task.completed)
-        .reduce((sum, task) => sum + task.weight, 0);
+    const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
 
-      const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
+    // 현재 단계 업데이트
+    const updatedCurrentStep = {
+      ...currentStep,
+      subTasks: updatedSubTasks,
+      progress
+    };
 
-      setCurrentStep({
-        ...currentStep,
-        subTasks: updatedSubTasks,
-        progress
-      });
+    // 모든 단계 업데이트
+    const updatedSteps = allInvestmentSteps.map((step, index) =>
+      index === currentStepIndex ? updatedCurrentStep : step
+    );
+
+    // 모든 서브태스크가 완료되었고, 다음 단계가 있다면 다음 단계로 이동
+    if (progress === 100 && currentStepIndex < updatedSteps.length - 1) {
+      setCurrentStepIndex(prev => prev + 1);
+      setCurrentStep(updatedSteps[currentStepIndex + 1]);
+    } else {
+      setCurrentStep(updatedCurrentStep);
     }
+
+    setAllInvestmentSteps(updatedSteps);
   };
 
   useEffect(() => {
@@ -277,10 +305,59 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         setActiveSession(normalizedContext);
       }
 
+      // 컨텍스트별 체크된 정보 수집
+      const contextInfo: any = {
+        context: normalizedContext,
+        message,
+        messages,
+      };
+
+      // 기초공부하기 컨텍스트의 선택된 텍스트
+      if (normalizedContext === '기초공부하기' && selectedTexts.length > 0) {
+        contextInfo.selectedTexts = selectedTexts;
+      }
+
+      // 투자시작하기 컨텍스트의 진행 상황
+      if (normalizedContext === '투자시작하기') {
+        if (currentStep) {
+          contextInfo.currentStep = currentStep;
+          contextInfo.allSteps = allInvestmentSteps;
+          contextInfo.currentStepIndex = currentStepIndex;
+        } else {
+          // LLM에게 새로운 단계 생성 요청
+          const stepResponse = await fetch('/api/generateInvestmentStep', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, context: normalizedContext })
+          });
+          
+          if (stepResponse.ok) {
+            const { step, allSteps, currentStepIndex: newIndex } = await stepResponse.json();
+            setCurrentStep(step);
+            setAllInvestmentSteps(allSteps);
+            setCurrentStepIndex(newIndex);
+            contextInfo.currentStep = step;
+            contextInfo.allSteps = allSteps;
+            contextInfo.currentStepIndex = newIndex;
+          }
+        }
+      }
+
+      // 살펴보기 컨텍스트의 선택된 섹터
+      if (normalizedContext === '살펴보기' && selectedSectors.length > 0) {
+        contextInfo.selectedSectors = selectedSectors;
+      }
+
+      // 분석하기 컨텍스트의 선택된 ETF
+      if (normalizedContext === '분석하기') {
+        contextInfo.selectedETFs = myETFs;
+      }
+
       const userMessage: ChatMessage = {
         role: 'user',
         content: message,
-        context: normalizedContext
+        context: normalizedContext,
+        ...contextInfo
       };
 
       // 기존 메시지에 새 메시지 추가
@@ -293,20 +370,15 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          messages: messages,
-          context: normalizedContext
-        }),
+        body: JSON.stringify(contextInfo),
       });
 
       if (!response.ok) throw new Error('API 응답 오류');
 
       const data = await response.json();
       
-      if (normalizedContext === '투자시작하기') {
-        const step = data.currentStep || defaultCurrentStep;
-        setCurrentStep(step);
+      if (normalizedContext === '투자시작하기' && data.currentStep) {
+        setCurrentStep(data.currentStep);
       }
 
       const aiMessage: ChatMessage = {
@@ -316,7 +388,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         relatedTopics: data.relatedTopics || [],
         nextCards: data.nextCards || [],
         context: normalizedContext,
-        currentStep: data.currentStep || defaultCurrentStep
+        currentStep: data.currentStep
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -434,6 +506,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       ...prev,
       [activeSession]: [...(prev[activeSession] || []), imageAnalysisMessage]
     }));
+  };
+
+  const handleSectorSelect = (sectors: SectorRank[]) => {
+    setSelectedSectors(sectors);
   };
 
   const renderContent = () => {
@@ -737,6 +813,9 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                       currentStep={currentStep}
                       onSubTaskComplete={handleSubTaskComplete}
                       selectedTexts={selectedTexts}
+                      onSectorSelect={handleSectorSelect}
+                      allSteps={allInvestmentSteps}
+                      currentStepIndex={currentStepIndex}
                     />
                   </div>
                 </div>

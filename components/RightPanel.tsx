@@ -50,6 +50,15 @@ interface RightPanelProps {
   currentStep?: CurrentStep;
   onSubTaskComplete?: (taskId: string, completed: boolean) => void;
   selectedTexts?: SubTask[];
+  onSectorSelect?: (sectors: SectorRank[]) => void;
+  allSteps?: Array<{
+    id: number;
+    title: string;
+    description: string;
+    progress: number;
+    subTasks: SubTask[];
+  }>;
+  currentStepIndex?: number;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
@@ -59,11 +68,14 @@ const RightPanel: React.FC<RightPanelProps> = ({
   onTopicClick,
   currentStep,
   onSubTaskComplete,
-  selectedTexts = []
+  selectedTexts = [],
+  onSectorSelect,
+  allSteps,
+  currentStepIndex
 }) => {
   const [userName, setUserName] = useState('');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
-  const [sectorRanks] = useState<SectorRank[]>([
+  const [sectorRanks, setSectorRanks] = useState<SectorRank[]>([
     {
       id: '1',
       name: '반도체',
@@ -153,6 +165,15 @@ const RightPanel: React.FC<RightPanelProps> = ({
     }
   }, [activeSession, currentStep]);
 
+  // 섹터 체크박스 상태 변경 핸들러
+  const handleSectorCheck = (sectorId: string, checked: boolean) => {
+    const updatedSectors = sectorRanks.map(sector => 
+      sector.id === sectorId ? { ...sector, checked } : sector
+    );
+    setSectorRanks(updatedSectors);
+    onSectorSelect?.(updatedSectors);
+  };
+
   if (activeSession === 'home') {
     return (
       <>
@@ -166,7 +187,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         <ul className="space-y-2">
           <li>
             <FadeIn 
-              text={"12월 13일 금요일\n\n"} 
+              text={"1월 4일 토요일\n\n"} 
               delay={800}
               className="text-gray-300 hover:text-gray-200 cursor-pointer font-bold text-lg whitespace-pre-line"
             />
@@ -175,7 +196,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f] transition-colors">
           <div className="flex items-center gap-2 mb-3">
             <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs">새로 나왔어요</span>
-            <span className="text-gray-400 text-sm">2024.01</span>
+            <span className="text-gray-400 text-sm">2025.01</span>
           </div>
           <FadeIn delay={500}>
             <div className="relative">
@@ -264,6 +285,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
           <InvestmentProgress
             currentStep={currentStep}
             onSubTaskComplete={onSubTaskComplete}
+            allSteps={allSteps}
+            currentStepIndex={currentStepIndex}
           />
         </div>
       )}
@@ -282,9 +305,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                   <Checkbox
                     id={sector.id}
                     checked={sector.checked}
-                    onCheckedChange={(checked) => {
-                      // 체크박스 상태 변경 처리
-                    }}
+                    onCheckedChange={(checked) => handleSectorCheck(sector.id, checked)}
                     className="mt-1 text-blue-300"
                   />
                   <div className="flex-1">

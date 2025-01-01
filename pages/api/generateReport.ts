@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .join('');
       } else if (response.content && typeof response.content === 'object') {
         if ('text' in response.content) {
-          contentStr = response.content.text;
+          contentStr = (response.content as { text: string }).text;
         } else {
           contentStr = JSON.stringify(response.content);
         }

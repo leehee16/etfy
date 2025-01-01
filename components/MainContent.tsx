@@ -5,6 +5,8 @@ import { Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import dynamic from 'next/dynamic';
+import { useArchiveStore } from '@/lib/store/archiveStore';
+import Archive from './Archive';
 
 const defaultCurrentStep = {
   id: 1,
@@ -189,6 +191,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   const [currentReferences, setCurrentReferences] = useState<Reference[]>([]);
   const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [currentStep, setCurrentStep] = useState<CurrentStep | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoverColor, setHoverColor] = useState<string | null>(null);
@@ -251,7 +254,6 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
   useEffect(() => {
     if (activeSession === 'home') {
-      setMessages([]);
       setCurrentReferences([]);
       setRelatedTopics([]);
     }
@@ -266,17 +268,21 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
   const handleCardClick = (title: string) => {
     setActiveSession(title);
-    const greeting = cards.find(card => card.title === title)?.greeting || '안녕하세요!';
-    const greetingMessage: ChatMessage = {
-      role: 'assistant',
-      content: greeting,
-      context: title
-    };
-    setMessages([greetingMessage]);
-    setSessionMessages(prev => ({
-      ...prev,
-      [title]: [greetingMessage]
-    }));
+    if (!sessionMessages[title]?.length) {
+      const greeting = cards.find(card => card.title === title)?.greeting || '안녕하세요!';
+      const greetingMessage: ChatMessage = {
+        role: 'assistant',
+        content: greeting,
+        context: title
+      };
+      setMessages([greetingMessage]);
+      setSessionMessages(prev => ({
+        ...prev,
+        [title]: [greetingMessage]
+      }));
+    } else {
+      setMessages(sessionMessages[title]);
+    }
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -288,6 +294,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     setIsLoading(true);
 
     try {
+      // 현재 사용자 정보 가져오기
+      const userData = sessionStorage.getItem('currentUser');
+      const currentUser = userData ? JSON.parse(userData) : { id: 'guest' };
+
       // 컨텍스트 감지 수행
       const contextResponse = await fetch('/api/detectContext', {
         method: 'POST',
@@ -348,11 +358,6 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
         contextInfo.selectedSectors = selectedSectors;
       }
 
-      // 분석하기 컨텍스트의 선택된 ETF
-      if (normalizedContext === '분석하기') {
-        contextInfo.selectedETFs = myETFs;
-      }
-
       const userMessage: ChatMessage = {
         role: 'user',
         content: message,
@@ -376,7 +381,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       if (!response.ok) throw new Error('API 응답 오류');
 
       const data = await response.json();
-      
+
       if (normalizedContext === '투자시작하기' && data.currentStep) {
         setCurrentStep(data.currentStep);
       }
@@ -513,80 +518,120 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   };
 
   const handleGenerateReport = async () => {
-    // 완료된 세션이 있는지 확인
-    const completedSessions = Object.entries(sessionMessages)
-      .filter(([_, messages]) => messages.length > 0);
-
-    if (completedSessions.length === 0) {
+    const completedSessions = Object.values(sessionMessages).filter(messages => messages.length > 0).length;
+    if (completedSessions === 0) {
       alert('먼저 하나 이상의 세션을 완료해주세요.');
       return;
     }
 
-    try {
-      setIsLoading(true);
+    // 확인 메시지 표시
+    if (!window.confirm('지금까지의 대화 내용으로 보고서를 생성하시겠습니까?')) {
+      return;
+    }
 
-      // 세션별 데이터 정리
-      const sessions = Object.fromEntries(
-        completedSessions.map(([context, messages]) => [
+    try {
+      setIsGeneratingReport(true);
+      // 현재 사용자 정보 가져오기
+      const userData = sessionStorage.getItem('currentUser');
+      const currentUser = userData ? JSON.parse(userData) : { id: 'guest' };
+
+      // 세션 메시지를 배열로 변환
+      const sessionArray = Object.entries(sessionMessages)
+        .filter(([_, messages]) => messages.length > 0)
+        .map(([context, messages]) => ({
           context,
-          {
-            messages: messages.map(msg => ({
-              role: msg.role,
-              content: msg.content,
-              context: msg.context,
-              selectedTexts: msg.selectedTexts,
-              selectedSectors: msg.selectedSectors,
-              currentStep: msg.currentStep,
-              selectedETFs: msg.selectedETFs
-            })),
-            context
-          }
-        ])
-      );
+          messages: messages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            references: msg.references,
+            relatedTopics: msg.relatedTopics
+          }))
+        }));
+
+      console.log('보고서 생성 요청:', {
+        sessions: sessionArray,
+        userId: currentUser.id
+      });
 
       const response = await fetch('/api/generateReport', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessions })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessions: sessionArray,
+          userId: currentUser.id
+        }),
       });
 
+      const data = await response.json();
+      console.log('API 응답 전체:', data);
+
       if (!response.ok) {
-        throw new Error('리포트 생성 실패');
+        throw new Error(data.error || '보고서 생성 중 오류가 발생했습니다.');
       }
 
-      const report = await response.json();
-      
-      // 리포트를 새로운 메시지로 추가
-      const reportMessage: ChatMessage = {
-        role: 'assistant',
-        content: `# ${report.title}\n\n` +
-          `## 요약\n${report.summary}\n\n` +
-          report.sections.map(section => 
-            `## ${section.title}\n\n` +
-            `${section.content}\n\n` +
-            `### 추천사항\n${section.recommendations.map(r => `- ${r}`).join('\n')}\n\n` +
-            `### 참고자료\n${section.references.map(r => `- ${r}`).join('\n')}`
-          ).join('\n\n') +
-          `\n\n## 결론\n${report.conclusion}`,
-        context: '보고서 생성'
+      if (!data.report) {
+        throw new Error('보고서 데이터를 받지 못했습니다.');
+      }
+
+      console.log('보고서 데이터:', data.report);
+
+      const { addReport } = useArchiveStore.getState();
+      const reportWithMetadata = {
+        id: crypto.randomUUID(),
+        userId: currentUser.id,
+        title: data.report.title,
+        content: JSON.stringify({
+          context_recognition: data.report.context_recognition,
+          summary: data.report.summary,
+          sections: data.report.sections,
+          conclusion: data.report.conclusion,
+          disclaimer: data.report.disclaimer
+        }),
+        date: new Date().toISOString(),
+        metadata: {
+          createdAt: new Date().toISOString(),
+          sessionCount: sessionArray.length,
+          contexts: sessionArray.map(s => s.context)
+        }
       };
 
-      setMessages([reportMessage]);
-      setSessionMessages(prev => ({
-        ...prev,
-        '보고서 생성': [reportMessage]
-      }));
-      setActiveSession('보고서 생성');
-
+      console.log('최종 보고서 데이터:', reportWithMetadata);
+      
+      addReport(reportWithMetadata);
+      alert('보고서가 생성되었습니다.');
+      setActiveSession('archive');
     } catch (error) {
-      console.error('리포트 생성 중 오류:', error);
-      alert('리포트 생성 중 오류가 발생했습니다.');
+      console.error('보고서 생성 오류:', error);
+      alert(error instanceof Error ? error.message : '보고서 생성 중 오류가 발생했습니다.');
     } finally {
-      setIsLoading(false);
+      setIsGeneratingReport(false);
     }
   };
 
+  const handleReportClick = (report: Report) => {
+    // 리포트 클릭 시 처리
+    console.log('Selected report:', report);
+  };
+
   const renderContent = () => {
+    if (activeSession === 'archive') {
+      const userData = sessionStorage.getItem('currentUser');
+      const currentUser = userData ? JSON.parse(userData) : { id: 'guest' };
+      const { reports } = useArchiveStore.getState();
+      
+      return (
+        <div className="flex-1 overflow-y-auto bg-[#1f1f1f] p-6">
+          <Archive
+            userId={currentUser.id}
+            reports={reports}
+            onReportClick={handleReportClick}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="h-full overflow-hidden">
         <div className="flex h-full">
@@ -600,17 +645,24 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                       { id: '투자시작하기', icon: <TrendingUp size={16} /> },
                       { id: '살펴보기', icon: <Search size={16} /> },
                       { id: '분석하기', icon: <ChartBar size={16} /> },
-                      { id: '보고서 생성', icon: <FileText size={16} /> }
+                      { 
+                        id: '보고서 생성', 
+                        icon: (
+                          <div className="relative">
+                            <FileText size={16} />
+                            {isGeneratingReport && (
+                              <div className="absolute -top-1 -right-1 w-2 h-2">
+                                <div className="absolute w-full h-full rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
                     ].map((item) => (
                       <div key={item.id} className="relative">
                         <button
                           onClick={() => {
                             if (item.id === '보고서 생성') {
-                              const completedSessions = Object.values(sessionMessages).filter(messages => messages.length > 0).length;
-                              if (completedSessions === 0) {
-                                alert('먼저 하나 이상의 세션을 완료해주세요.');
-                                return;
-                              }
                               handleGenerateReport();
                             } else {
                               setActiveSession(item.id);

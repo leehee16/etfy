@@ -187,7 +187,11 @@ const RightPanel: React.FC<RightPanelProps> = ({
         <ul className="space-y-2">
           <li>
             <FadeIn 
-              text={"1월 4일 토요일\n\n"} 
+              text={`${new Date().toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })} ${['일', '월', '화', '수', '목', '금', '토'][new Date().getDay()]}요일\n\n`}
               delay={800}
               className="text-gray-300 hover:text-gray-200 cursor-pointer font-bold text-lg whitespace-pre-line"
             />
@@ -244,7 +248,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
       {activeSession === '기초공부하기' && selectedTexts && selectedTexts.length > 0 && (
         <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-xl font-bold text-amber-300">또물어봥</h3>
+            <h3 className="text-xl font-bold text-amber-300">스크랩</h3>
           </div>
           <div className="space-y-3">
             {selectedTexts.map((task) => (

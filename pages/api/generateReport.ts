@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChatOpenAI } from "@langchain/openai";
 import { reportPrompt } from './prompts/reportPrompt';
+import { v4 as uuidv4 } from 'uuid';
 
 const model = new ChatOpenAI({
   modelName: 'o1-preview'
@@ -12,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { sessions } = req.body;
+    const { sessions, userId } = req.body;
 
     // 세션 데이터를 문자열로 변환
     const sessionsText = Object.entries(sessions)
@@ -39,26 +40,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       .join('\n\n');
 
-    // 프롬프트 생성
     const formattedPrompt = await reportPrompt.format({
       sessions: sessionsText,
     });
 
-    // 리포트 생성
     const response = await model.invoke(formattedPrompt);
 
     try {
       const report = JSON.parse(response.content);
-      res.status(200).json(report);
+      
+      // 보고서에 메타데이터 추가
+      const now = new Date();
+      const reportWithMeta = {
+        id: uuidv4(),
+        ...report,
+        date: now.toISOString(),
+        metadata: {
+          createdAt: now.toISOString(),
+          sessionCount: Object.keys(sessions).length,
+          contexts: Object.keys(sessions),
+          sectors: Object.values(sessions)
+            .flatMap((session: any) => 
+              session.messages
+                .flatMap((msg: any) => msg.selectedSectors || [])
+            )
+            .filter((sector, index, self) => self.indexOf(sector) === index),
+          etfs: Object.values(sessions)
+            .flatMap((session: any) => 
+              session.messages
+                .flatMap((msg: any) => msg.selectedETFs || [])
+            )
+            .filter((etf, index, self) => self.indexOf(etf) === index),
+        }
+      };
+
+      return res.status(200).json({ report: reportWithMeta });
+      
     } catch (parseError) {
       console.error('JSON 파싱 오류:', parseError);
-      res.status(500).json({ 
-        error: 'JSON 파싱 오류가 발생했습니다.',
-        content: response.content 
-      });
+      return res.status(500).json({ error: 'JSON 파싱 오류가 발생했습니다.' });
     }
   } catch (error) {
     console.error('리포트 생성 중 오류:', error);
-    res.status(500).json({ error: '리포트 생성 중 오류가 발생했습니다.' });
+    return res.status(500).json({ error: '리포트 생성 중 오류가 발생했습니다.' });
   }
 } 

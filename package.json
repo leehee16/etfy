@@ -17,6 +17,7 @@
     "@types/react-router-dom": "^5.3.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "formidable": "^3.5.1",
     "gpt-tokenizer": "^2.8.1",
     "langchain": "^0.3.6",
@@ -30,9 +31,12 @@
     "react-dom": "^18",
     "react-markdown": "^9.0.1",
     "react-router-dom": "^7.0.2",
+    "react-syntax-highlighter": "^15.6.1",
+    "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
-    "tiktoken": "^1.0.17"
+    "tiktoken": "^1.0.17",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",

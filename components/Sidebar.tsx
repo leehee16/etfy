@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Home, BookOpen, BrainCircuit, HelpCircle, Archive, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, BookOpen, BrainCircuit, HelpCircle, Archive, Settings, ChevronDown, FileText } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 
@@ -16,6 +16,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSession }) => {
+  const [expandedFolders, setExpandedFolders] = useState<{ [key: string]: boolean }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -151,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
             <li><hr className="border-[#2f2f2f] my-2" /></li>
             <li>
               <button 
-                onClick={() => setActiveSession('archive')} 
+                onClick={() => setActiveSession('archive')}
                 className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
               >
                 <div className="flex items-center justify-center w-5 h-5">
@@ -162,24 +163,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
                 </div>
               </button>
             </li>
-            <li><hr className="border-[#2f2f2f] my-2" /></li>
-            <li>
-              <button 
-                onClick={() => setActiveSession('admin')} 
-                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
-                aria-label="관리자 페이지"
-              >
-                <div className="flex items-center justify-center w-5 h-5">
-                  <Settings className="w-4 h-4" />
-                </div>
-                <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
-                  관리자 페이지
-                </div>
-              </button>
-            </li>
           </ul>
 
-          <LogoutButton isOpen={isOpen} />
+          <div className="mt-auto space-y-2">
+            <LogoutButton isOpen={isOpen} />
+            <hr className="border-[#2f2f2f] my-2" />
+            <button 
+              onClick={() => setActiveSession('admin')} 
+              className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
+              aria-label="관리자 페이지"
+            >
+              <div className="flex items-center justify-center w-5 h-5">
+                <Settings className="w-4 h-4" />
+              </div>
+              <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+                관리자 페이지
+              </div>
+            </button>
+          </div>
         </nav>
       </nav>
     </div>

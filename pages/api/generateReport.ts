@@ -3,6 +3,15 @@ import { ChatOpenAI } from "@langchain/openai";
 import { reportPrompt } from './prompts/reportPrompt';
 import { v4 as uuidv4 } from 'uuid';
 
+// UUID 생성 함수 추가
+function generateId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 const model = new ChatOpenAI({
   modelName: 'o1-preview'
 });
@@ -77,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 보고서에 메타데이터 추가
       const now = new Date();
       const reportWithMeta = {
-        id: uuidv4(),
+        id: generateId(),
         ...report,
         date: now.toISOString(),
         metadata: {

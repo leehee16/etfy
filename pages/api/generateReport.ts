@@ -47,13 +47,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const response = await model.invoke(formattedPrompt);
 
     try {
-      // content가 string이 아닐 경우 string으로 변환
-      const contentStr = typeof response.content === 'string' 
-        ? response.content 
-        : Array.isArray(response.content) 
-          ? response.content.map(c => typeof c === 'string' ? c : c.text).join('') 
-          : response.content.text;
-          
+      // 디버깅을 위한 로깅 추가
+      console.log('Raw response:', response);
+      console.log('Response type:', typeof response.content);
+      
+      let contentStr = '';
+      if (typeof response.content === 'string') {
+        contentStr = response.content;
+      } else if (Array.isArray(response.content)) {
+        contentStr = response.content
+          .map(item => {
+            if (typeof item === 'string') return item;
+            if ('text' in item) return item.text;
+            return '';
+          })
+          .join('');
+      } else if (response.content && typeof response.content === 'object') {
+        if ('text' in response.content) {
+          contentStr = response.content.text;
+        } else {
+          contentStr = JSON.stringify(response.content);
+        }
+      }
+
+      console.log('Processed content:', contentStr);
+      
       const report = JSON.parse(contentStr);
       
       // 보고서에 메타데이터 추가

@@ -47,7 +47,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const response = await model.invoke(formattedPrompt);
 
     try {
-      const report = JSON.parse(response.content);
+      // content가 string이 아닐 경우 string으로 변환
+      const contentStr = typeof response.content === 'string' 
+        ? response.content 
+        : Array.isArray(response.content) 
+          ? response.content.map(c => typeof c === 'string' ? c : c.text).join('') 
+          : response.content.text;
+          
+      const report = JSON.parse(contentStr);
       
       // 보고서에 메타데이터 추가
       const now = new Date();

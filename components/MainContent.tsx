@@ -92,6 +92,20 @@ interface MyETF {
   currentPrice: number;
   change: number;
   amount: number;
+  checked: boolean;
+}
+
+interface Report {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  date: string;
+  metadata: {
+    createdAt: string;
+    sessionCount: number;
+    contexts: string[];
+  };
 }
 
 // 컨텍스트별 호버링 스타일 정의
@@ -189,7 +203,7 @@ const SimpleLineChart = () => (
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
-  handleSendMessage: (message: string) => void;
+  handleSendMessage: (message: string, context?: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   context: string;
   isLoading: boolean;
@@ -274,14 +288,15 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       ]
     }
   ]);
-  const [myETFs] = useState<MyETF[]>([
+  const [myETFs, setMyETFs] = useState<MyETF[]>([
     {
       name: 'KODEX 200',
       code: '069500',
       purchasePrice: 35750,
       currentPrice: 36800,
       change: 2.94,
-      amount: 10
+      amount: 10,
+      checked: false
     },
     {
       name: 'TIGER 차이나전기차',
@@ -289,7 +304,8 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       purchasePrice: 12850,
       currentPrice: 12100,
       change: -5.84,
-      amount: 20
+      amount: 20,
+      checked: false
     }
   ]);
   const [usedSessions, setUsedSessions] = useState<Record<string, boolean>>({
@@ -325,10 +341,11 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
   // 서브태스크 완료 처리
   const handleSubTaskComplete = (taskId: string, completed: boolean) => {
-    if (!currentStep || !allInvestmentSteps.length) return;
+    if (!currentStep) {
+      setCurrentStep(defaultCurrentStep);
+    }
 
-    // 현재 단계의 서브태스크 업데이트
-    const updatedSubTasks = currentStep.subTasks.map(task =>
+    const updatedSubTasks = (currentStep || defaultCurrentStep).subTasks.map(task =>
       task.id === taskId ? { ...task, completed } : task
     );
 
@@ -342,25 +359,28 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
     // 현재 단계 업데이트
     const updatedCurrentStep = {
-      ...currentStep,
+      ...(currentStep || defaultCurrentStep),
       subTasks: updatedSubTasks,
       progress
     };
 
+    setCurrentStep(updatedCurrentStep);
+    
     // 모든 단계 업데이트
-    const updatedSteps = allInvestmentSteps.map((step, index) =>
-      index === currentStepIndex ? updatedCurrentStep : step
-    );
-
-    // 모든 서브태스크가 완료되었고, 다음 단계가 있다면 다음 단계로 이동
-    if (progress === 100 && currentStepIndex < updatedSteps.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
-      setCurrentStep(updatedSteps[currentStepIndex + 1]);
+    if (allInvestmentSteps.length === 0) {
+      setAllInvestmentSteps([updatedCurrentStep]);
     } else {
-      setCurrentStep(updatedCurrentStep);
-    }
+      const updatedSteps = allInvestmentSteps.map((step, index) =>
+        index === currentStepIndex ? updatedCurrentStep : step
+      );
+      setAllInvestmentSteps(updatedSteps);
 
-    setAllInvestmentSteps(updatedSteps);
+      // 현재 단계가 완료되었고 다음 단계가 있다면 자동으로 다음 단계로 이동
+      if (progress === 100 && currentStepIndex < updatedSteps.length - 1) {
+        setCurrentStepIndex(currentStepIndex + 1);
+        setCurrentStep(updatedSteps[currentStepIndex + 1]);
+      }
+    }
   };
 
   useEffect(() => {
@@ -441,38 +461,40 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
       // 기초공부하기 컨텍스트의 선택된 텍스트
       if (normalizedContext === '기초공부하기' && selectedTexts.length > 0) {
-        contextInfo.selectedTexts = selectedTexts;
+        contextInfo.selectedTexts = selectedTexts.filter(text => text.completed);
       }
 
       // 투자시작하기 컨텍스트의 진행 상황
       if (normalizedContext === '투자시작하기') {
-        if (currentStep) {
-          contextInfo.currentStep = currentStep;
-          contextInfo.allSteps = allInvestmentSteps;
-          contextInfo.currentStepIndex = currentStepIndex;
+        if (!currentStep) {
+          setCurrentStep(defaultCurrentStep);
+          contextInfo.currentStep = defaultCurrentStep;
         } else {
-          // LLM에게 새로운 단계 생성 요청
-          const stepResponse = await fetch('/api/generateInvestmentStep', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, context: normalizedContext })
-          });
-          
-          if (stepResponse.ok) {
-            const { step, allSteps, currentStepIndex: newIndex } = await stepResponse.json();
-            setCurrentStep(step);
-            setAllInvestmentSteps(allSteps);
-            setCurrentStepIndex(newIndex);
-            contextInfo.currentStep = step;
-            contextInfo.allSteps = allSteps;
-            contextInfo.currentStepIndex = newIndex;
-          }
+          contextInfo.currentStep = currentStep;
         }
+        contextInfo.allSteps = allInvestmentSteps;
+        contextInfo.currentStepIndex = currentStepIndex;
+        
+        // 현재 단계의 완료된 태스크 정보 추가
+        const completedTasks = (currentStep || defaultCurrentStep).subTasks
+          .filter(task => task.completed)
+          .map(task => ({
+            id: task.id,
+            title: task.title,
+            description: task.description
+          }));
+        
+        contextInfo.completedTasks = completedTasks;
       }
 
       // 살펴보기 컨텍스트의 선택된 섹터
       if (normalizedContext === '살펴보기' && selectedSectors.length > 0) {
-        contextInfo.selectedSectors = selectedSectors;
+        contextInfo.selectedSectors = selectedSectors.filter(sector => sector.checked);
+      }
+
+      // 분석하기 컨텍스트의 선택된 ETF
+      if (normalizedContext === '분석하기' && myETFs.length > 0) {
+        contextInfo.selectedETFs = myETFs.filter(etf => etf.checked);
       }
 
       const userMessage: ChatMessage = {
@@ -499,8 +521,56 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
 
       const data = await response.json();
 
+      // 투자시작하기 컨텍스트의 다음 단계 처리
+      if (normalizedContext === '투자시작하기' && data.nextStep) {
+        const newStep = {
+          id: allInvestmentSteps.length + 1,
+          title: data.nextStep.title,
+          description: data.nextStep.description,
+          progress: 0,
+          subTasks: data.nextStep.subTasks.map((task: any) => ({
+            id: `${allInvestmentSteps.length + 1}-${task.id}`,
+            title: task.title,
+            description: task.description,
+            completed: false,
+            weight: task.weight || 25
+          }))
+        };
+
+        // 현재 단계가 완료되었거나 아직 단계가 없는 경우
+        if (!currentStep || currentStep.progress === 100) {
+          setCurrentStep(newStep);
+          setCurrentStepIndex(allInvestmentSteps.length);
+          setAllInvestmentSteps(prev => [...prev, newStep]);
+        } else {
+          // 현재 단계가 진행 중인 경우, 다음 단계로 저장
+          setAllInvestmentSteps(prev => {
+            const exists = prev.some(step => step.title === newStep.title);
+            if (!exists) {
+              return [...prev, newStep];
+            }
+            return prev;
+          });
+        }
+      }
+
+      // 현재 단계 업데이트 (API에서 현재 단계 정보가 오는 경우)
       if (normalizedContext === '투자시작하기' && data.currentStep) {
-        setCurrentStep(data.currentStep);
+        const updatedStep = {
+          ...currentStep,
+          ...data.currentStep,
+          subTasks: data.currentStep.subTasks.map((task: any, index: number) => ({
+            ...task,
+            id: task.id || `${currentStepIndex + 1}-${index + 1}`,
+            weight: task.weight || 25
+          }))
+        };
+        setCurrentStep(updatedStep);
+        setAllInvestmentSteps(prev => 
+          prev.map((step, index) => 
+            index === currentStepIndex ? updatedStep : step
+          )
+        );
       }
 
       const aiMessage: ChatMessage = {
@@ -764,6 +834,12 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     );
   };
 
+  const handleETFCheck = (code: string, checked: boolean) => {
+    setMyETFs(prev => prev.map(etf => 
+      etf.code === code ? { ...etf, checked } : etf
+    ));
+  };
+
   const renderContent = () => {
     if (activeSession === 'archive') {
       const userData = sessionStorage.getItem('currentUser');
@@ -889,9 +965,10 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                         {myETFs.map((etf) => (
                           <div 
                             key={etf.code} 
-                            className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#2f2f2f]"
+                            className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#2f2f2f] cursor-pointer"
+                            onClick={() => handleETFCheck(etf.code, !etf.checked)}
                           >
-                            <div className="w-1.5 h-1.5 rounded-full bg-pink-300/50" />
+                            <div className={`w-1.5 h-1.5 rounded-full ${etf.checked ? 'bg-pink-300' : 'bg-pink-300/50'}`} />
                             <span className="text-xs text-gray-400 truncate max-w-[100px]">{etf.name}</span>
                           </div>
                         ))}
@@ -1094,7 +1171,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     <div className="flex-1 overflow-y-auto px-6 chat-messages-container">
                       <ChatMessages 
                         messages={messages} 
-                        handleSendMessage={handleSendMessage} 
+                        handleSendMessage={(message: string) => handleSendMessage(message, activeSession)}
                         messagesEndRef={messagesEndRef}
                         context={activeSession}
                         isLoading={isLoading}

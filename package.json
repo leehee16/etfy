@@ -29,6 +29,7 @@
     "pdf2json": "^3.1.4",
     "react": "^18",
     "react-dom": "^18",
+    "react-joyride": "^2.9.3",
     "react-markdown": "^9.0.1",
     "react-router-dom": "^7.0.2",
     "react-syntax-highlighter": "^15.6.1",

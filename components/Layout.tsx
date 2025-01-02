@@ -22,6 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 
         setActiveSession={setActiveSession}
+        activeSession={activeSession}
       />
       <main className={`fixed top-0 right-0 bottom-0 transition-all duration-300 ${isSidebarOpen ? 'left-64' : 'left-20'}`}>
         {children || (

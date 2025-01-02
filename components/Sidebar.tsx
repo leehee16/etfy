@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Home, BookOpen, BrainCircuit, HelpCircle, Archive, Settings, ChevronDown, FileText, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, BookOpen, BrainCircuit, HelpCircle, Archive, Settings, ChevronDown, FileText, MessageCircle, Lightbulb } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import GuideMode from './GuideMode';
 
 const LogoutButton = dynamic(() => import('./LogoutButton'), {
   ssr: false
@@ -14,12 +15,14 @@ interface SidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
   setActiveSession: (session: string) => void;
+  activeSession: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSession }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSession, activeSession }) => {
   const [expandedFolders, setExpandedFolders] = useState<{ [key: string]: boolean }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGuideMode, setIsGuideMode] = useState(false);
 
   const handleLogoClick = () => {
     setActiveSession('home');
@@ -51,6 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
 
   return (
     <div className={`fixed top-0 left-0 h-full transition-[width] duration-300 ${isOpen ? 'w-64' : 'w-20'}`}>
+      <GuideMode isActive={isGuideMode} onFinish={() => setIsGuideMode(false)} activeSession={activeSession} />
       <nav className="relative h-full bg-[#242424] border-r border-[#2f2f2f] p-4">
         <div className="flex items-center h-12 mb-6">
           <button
@@ -64,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
           <div className={`ml-3 overflow-hidden transition-opacity duration-200 ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
             <button
               onClick={handleLogoClick}
-              className="flex items-center justify-start cursor-pointer text-gray-200"
+              className="logo-button flex items-center justify-start cursor-pointer text-gray-200"
               disabled={isUploading}
             >
               <Image
@@ -104,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
             <li>
               <button 
                 onClick={() => setActiveSession('chat')} 
-                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
+                className="chat-button flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
               >
                 <div className="flex items-center justify-center w-5 h-5">
                   <MessageCircle className="w-4 h-4" />
@@ -118,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
             <li>
               <button 
                 onClick={() => setActiveSession('investmentStyle')}
-                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
+                className="investment-style-button flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
               >
                 <div className="flex items-center justify-center w-5 h-5">
                   <BrainCircuit className="w-4 h-4" />
@@ -135,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
             <li>
               <button 
                 onClick={() => setActiveSession('archive')}
-                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
+                className="archive-button flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
               >
                 <div className="flex items-center justify-center w-5 h-5">
                   <Archive className="w-4 h-4" />
@@ -148,6 +152,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
           </ul>
 
           <div className="mt-auto space-y-2">
+            <button 
+              onClick={() => setIsGuideMode(true)}
+              className="guide-mode-button flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
+            >
+              <div className="flex items-center justify-center w-5 h-5">
+                <Lightbulb className="w-4 h-4" />
+              </div>
+              <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+                가이드 모드
+              </div>
+            </button>
             <LogoutButton isOpen={isOpen} />
             <hr className="border-[#2f2f2f] my-2" />
             <button 

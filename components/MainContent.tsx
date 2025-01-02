@@ -910,7 +910,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                   </div>
                 ) : activeSession === 'home' ? (
                   <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-shrink-0 py-12 px-8">
+                    <div className="flex-shrink-0 py-12 px-8 home-dashboard">
                       <div className="text-center mb-8">
                         <h2 className="text-3xl font-bold text-gray-200 mb-2">
                           당신의 ETF 투자 파트너
@@ -1047,15 +1047,17 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     {/* 채팅 입력창 추가 */}
                     <div className="flex-shrink-0 p-6 relative">
                       <div className="max-w-3xl mx-auto">
-                        <ChatInput 
-                          onSendMessage={handleSendMessage}
-                          placeholder="ETFy가 도와드릴게요."
-                          disabled={isLoading}
-                          context={activeSession}
-                          onNextCards={handleNextCards}
-                          onFocus={() => setShowExampleQuestions(true)}
-                          onBlur={() => setTimeout(() => setShowExampleQuestions(false), 200)}
-                        />
+                        <div className="p-0.5 rounded-2xl bg-white/10">
+                          <ChatInput 
+                            onSendMessage={handleSendMessage}
+                            placeholder="ETFy가 도와드릴게요."
+                            disabled={isLoading}
+                            context={activeSession}
+                            onNextCards={handleNextCards}
+                            onFocus={() => setShowExampleQuestions(true)}
+                            onBlur={() => setTimeout(() => setShowExampleQuestions(false), 200)}
+                          />
+                        </div>
                         
                         {/* 예시 질문 팝업 */}
                         <div 
@@ -1089,7 +1091,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col overflow-hidden bg-[#1f1f1f]">
-                    <div className="flex-1 overflow-y-auto px-6">
+                    <div className="flex-1 overflow-y-auto px-6 chat-messages-container">
                       <ChatMessages 
                         messages={messages} 
                         handleSendMessage={handleSendMessage} 
@@ -1102,13 +1104,15 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     </div>
                     <div className="flex-shrink-0 p-4 bg-[#1f1f1f] border-t border-[#2f2f2f]">
                       <div className="max-w-3xl mx-auto">
-                        <ChatInput 
-                          onSendMessage={handleSendMessage}
-                          placeholder="메시지를 입력하세요..."
-                          disabled={isLoading}
-                          context={activeSession}
-                          onNextCards={handleNextCards}
-                        />
+                        <div className="p-0.5 rounded-2xl bg-white/10">
+                          <ChatInput 
+                            onSendMessage={handleSendMessage}
+                            placeholder="메시지를 입력하세요..."
+                            disabled={isLoading}
+                            context={activeSession}
+                            onNextCards={handleNextCards}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

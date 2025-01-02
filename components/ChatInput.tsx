@@ -178,13 +178,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div
           className={`
             flex items-center
-            bg-[#242424] rounded-xl
+            bg-[#242424] rounded-2xl
             border border-[#2f2f2f]
             context-input-transition
             ${isContextChanging ? 'context-input-animation' : ''}
-            focus-within:ring-1 focus-within:ring-opacity-50
-            ${contextStyle?.ring || 'focus-within:ring-gray-600'}
-            relative h-[40px] overflow-hidden
+            focus-within:ring-0
+            focus-within:border-white/20
+            relative h-[52px] overflow-hidden
           `}
           style={{
             '--context-shadow': contextStyle?.shadow || 'rgba(75, 85, 99, 0.4)'

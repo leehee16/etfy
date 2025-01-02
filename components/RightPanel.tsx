@@ -205,7 +205,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     <div className="flex flex-col h-full p-6">
       {activeSession !== 'home' && activeSession !== 'admin' && (
         <div className="flex-shrink-0 border-b border-[#2f2f2f] pb-4 space-y-4">
-          <nav className="flex items-center justify-between">
+          <nav className="action-buttons flex items-center justify-between">
             {[
               { id: '기초공부하기', icon: <Book size={16} /> },
               { id: '투자시작하기', icon: <TrendingUp size={16} /> },
@@ -227,7 +227,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           </nav>
           <button
             onClick={handleGenerateReport}
-            className="w-full p-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-gray-400 hover:text-gray-300 hover:bg-[#2f2f2f]/50"
+            className="generate-report-button w-full p-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-gray-400 hover:text-gray-300 hover:bg-[#2f2f2f]/50"
           >
             <FileText size={16} className="text-purple-300" />
             <span className="text-xs font-medium">보고서 생성</span>

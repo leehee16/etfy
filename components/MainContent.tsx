@@ -73,6 +73,27 @@ interface ChatMessage {
   selectedSectors?: SectorRank[];
 }
 
+interface SectorRank {
+  id: string;
+  name: string;
+  change: number;
+  checked: boolean;
+  etfs: {
+    name: string;
+    code: string;
+    change: number;
+  }[];
+}
+
+interface MyETF {
+  name: string;
+  code: string;
+  purchasePrice: number;
+  currentPrice: number;
+  change: number;
+  amount: number;
+}
+
 // 컨텍스트별 호버링 스타일 정의
 const cardStyles = {
   '기초공부하기': {
@@ -221,7 +242,87 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     }>;
   }>>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
-  
+  const [sectorRanks, setSectorRanks] = useState<SectorRank[]>([
+    {
+      id: '1',
+      name: '반도체',
+      change: 2.5,
+      checked: false,
+      etfs: [
+        { name: 'KODEX 반도체', code: '305720', change: 2.8 },
+        { name: 'TIGER 반도체', code: '139260', change: 2.3 }
+      ]
+    },
+    {
+      id: '2',
+      name: '2차전지',
+      change: 1.8,
+      checked: false,
+      etfs: [
+        { name: 'KODEX 2차전지산업', code: '305540', change: 1.9 },
+        { name: 'TIGER 2차전지테마', code: '305540', change: 1.7 }
+      ]
+    },
+    {
+      id: '3',
+      name: '바이오',
+      change: -0.5,
+      checked: false,
+      etfs: [
+        { name: 'KODEX 바이오', code: '244580', change: -0.3 },
+        { name: 'TIGER 헬스케어', code: '227910', change: -0.7 }
+      ]
+    }
+  ]);
+  const [myETFs] = useState<MyETF[]>([
+    {
+      name: 'KODEX 200',
+      code: '069500',
+      purchasePrice: 35750,
+      currentPrice: 36800,
+      change: 2.94,
+      amount: 10
+    },
+    {
+      name: 'TIGER 차이나전기차',
+      code: '371460',
+      purchasePrice: 12850,
+      currentPrice: 12100,
+      change: -5.84,
+      amount: 20
+    }
+  ]);
+  const [usedSessions, setUsedSessions] = useState<Record<string, boolean>>({
+    '기초공부하기': false,
+    '투자시작하기': false,
+    '살펴보기': false,
+    '분석하기': false
+  });
+  const [showExampleQuestions, setShowExampleQuestions] = useState(false);
+
+  const exampleQuestions = [
+    {
+      id: '기초공부하기',
+      question: "ETF 추적오차율이 무엇인가요?",
+      color: "bg-amber-300"
+    },
+    {
+      id: '투자시작하기',
+      question: "증권사 계좌는 어떻게 개설하나요?",
+      color: "bg-green-300"
+    },
+    {
+      id: '살펴보기',
+      question: "반도체 섹터 ETF 추천해주세요",
+      color: "bg-blue-300"
+    },
+    {
+      id: '분석하기',
+      question: "KODEX 200 ETF 분석해주세요",
+      color: "bg-pink-300"
+    }
+  ];
+
   // 서브태스크 완료 처리
   const handleSubTaskComplete = (taskId: string, completed: boolean) => {
     if (!currentStep || !allInvestmentSteps.length) return;
@@ -298,12 +399,18 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     }, 100);
   };
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, context: string) => {
     if (!message.trim()) return;
     
     setIsLoading(true);
 
     try {
+      // 현재 컨텍스트를 사용한 것으로 표시
+      setUsedSessions(prev => ({
+        ...prev,
+        [activeSession]: true
+      }));
+
       // 현재 사용자 정보 가져오기
       const userData = sessionStorage.getItem('currentUser');
       const currentUser = userData ? JSON.parse(userData) : { id: 'guest' };
@@ -434,6 +541,16 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     }
   };
 
+  // 컨텍스트 변경 시 해당 세션 사용 여부 확인
+  useEffect(() => {
+    if (activeSession !== 'home' && activeSession !== 'admin') {
+      setUsedSessions(prev => ({
+        ...prev,
+        [activeSession]: sessionMessages[activeSession]?.length > 0 || false
+      }));
+    }
+  }, [activeSession, sessionMessages]);
+
   // 디버깅용 로그
   useEffect(() => {
     console.log('MainContent state:', {
@@ -502,7 +619,15 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
   )`;
 
   const handleAddSelectedText = (newTask: SubTask) => {
-    setSelectedTexts(prev => [...prev, newTask]);
+    setSelectedTexts(prev => {
+      const exists = prev.find(item => item.id === newTask.id);
+      if (exists) {
+        return prev.map(item => 
+          item.id === newTask.id ? { ...item, completed: !item.completed } : item
+        );
+      }
+      return [...prev, newTask];
+    });
   };
 
   const handleNextCards = (cards: Array<{ title: string; content: string }>, imageDescription?: string) => {
@@ -625,6 +750,20 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
     console.log('Selected report:', report);
   };
 
+  const handleSectorCheck = (sectorId: string, checked: boolean) => {
+    setSectorRanks(prev => prev.map(sector => 
+      sector.id === sectorId ? { ...sector, checked } : sector
+    ));
+  };
+
+  const handleBasicStudyCheck = (taskId: string, completed: boolean) => {
+    setSelectedTexts(prev => 
+      prev.map(text => 
+        text.id === taskId ? { ...text, completed } : text
+      )
+    );
+  };
+
   const renderContent = () => {
     if (activeSession === 'archive') {
       const userData = sessionStorage.getItem('currentUser');
@@ -654,121 +793,114 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
       <div className="h-full overflow-hidden">
         <div className="flex h-full">
           <div className="flex-1 flex flex-col overflow-hidden">
-            <header className="flex-shrink-0 h-16 bg-[#1f1f1f] border-b border-[#2f2f2f]">
-              <div className="h-full px-6 flex items-center">
-                {activeSession !== 'home' && activeSession !== 'admin' && (
-                  <nav className="flex items-center space-x-1">
-                    {[
-                      { id: '기초공부하기', icon: <Book size={16} /> },
-                      { id: '투자시작하기', icon: <TrendingUp size={16} /> },
-                      { id: '살펴보기', icon: <Search size={16} /> },
-                      { id: '분석하기', icon: <ChartBar size={16} /> },
-                      { 
-                        id: '보고서 생성', 
-                        icon: (
-                          <div className="relative">
-                            <FileText size={16} />
-                            {isGeneratingReport && (
-                              <div className="absolute -top-1 -right-1 w-2 h-2">
-                                <div className="absolute w-full h-full rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-                              </div>
-                            )}
-                          </div>
-                        )
-                      }
-                    ].map((item) => (
-                      <div key={item.id} className="relative">
-                        <button
-                          onClick={() => {
-                            if (item.id === '보고서 생성') {
-                              handleGenerateReport();
-                            } else {
-                              setActiveSession(item.id);
-                            }
-                          }}
-                          className={`
-                            group relative px-4 py-2 rounded-lg transition-all duration-300 w-full
-                            ${item.id === '보고서 생성'
-                              ? 'text-gray-400 hover:text-gray-300'
-                              : activeSession === item.id 
-                                ? 'bg-[#2f2f2f] text-gray-200' 
-                                : 'text-gray-400 hover:text-gray-300'
-                            }
-                          `}
-                        >
-                          {item.id === '보고서 생성' && (
-                            <>
-                              <div className="absolute inset-0 rounded-lg overflow-hidden">
-                                <div 
-                                  className="w-[150%] h-[150%] absolute top-[-25%] left-[-25%] animate-rotate-border"
-                                  style={{
-                                    background: Object.values(sessionMessages).some(messages => messages.length > 0)
-                                      ? `conic-gradient(
-                                          from 0deg at 50% 50%,
-                                          transparent 0%,
-                                          ${(() => {
-                                            const allMessages = Object.entries(sessionMessages)
-                                              .flatMap(([context, messages]) => 
-                                                messages.map(() => ({
-                                                  context,
-                                                  color: cardStyles[context as keyof typeof cardStyles]?.dotColor
-                                                }))
-                                              );
-                                            
-                                            const totalMessages = allMessages.length;
-                                            const totalLength = totalMessages >= 4 ? 100 : 20 + (totalMessages * 10);
-                                            const segmentLength = totalLength / totalMessages;
-
-                                            return allMessages
-                                              .map((msg, index) => {
-                                                const startPercent = index * segmentLength;
-                                                const endPercent = (index + 1) * segmentLength;
-                                                return `${msg.color} ${startPercent}%, ${msg.color} ${endPercent}%`;
-                                              })
-                                              .join(', ');
-                                          })()},
-                                          transparent ${
-                                            Object.values(sessionMessages)
-                                              .reduce((sum, messages) => sum + messages.length, 0) >= 4 
-                                                ? '100' 
-                                                : 20 + (Object.values(sessionMessages)
-                                                    .reduce((sum, messages) => sum + messages.length, 0) * 10)
-                                          }%,
-                                          transparent 100%
-                                        )`
-                                      : 'transparent',
-                                    filter: `blur(${Math.min(15 + (Object.values(sessionMessages)
-                                      .reduce((sum, messages) => sum + messages.length, 0) * 5), 30)}px)`,
-                                    opacity: Math.min(0.7 + (Object.values(sessionMessages)
-                                      .reduce((sum, messages) => sum + messages.length, 0) * 0.1), 1)
-                                  }}
-                                />
-                              </div>
-                              <div 
-                                className="absolute inset-[1px] bg-[#242424] rounded-lg"
-                                style={{
-                                  background: 'linear-gradient(180deg, rgba(36,36,36,0.9) 0%, rgba(36,36,36,1) 100%)'
-                                }}
-                              />
-                            </>
-                          )}
-                          <div className="relative flex items-center space-x-2">
-                            {item.id !== '보고서 생성' && sessionMessages[item.id]?.length > 0 && (
-                              <div 
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: cardStyles[item.id as keyof typeof cardStyles]?.dotColor }}
-                              />
-                            )}
-                            {item.icon}
-                            <span className="text-sm font-medium">{item.id}</span>
-                          </div>
-                        </button>
+            {activeSession !== 'home' && activeSession !== 'admin' ? (
+              <header className="flex-shrink-0 h-32 bg-[#1f1f1f] border-b border-[#2f2f2f]">
+                <div className="h-full px-6 flex items-center">
+                  <nav className="w-full grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <Book 
+                          size={20} 
+                          className={usedSessions['기초공부하기'] ? 'text-amber-300' : 'text-gray-500'} 
+                        />
                       </div>
-                    ))}
+                      <div className="flex-1 flex flex-wrap gap-2">
+                        {selectedTexts && selectedTexts.map((text) => (
+                          <div 
+                            key={text.id} 
+                            className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#2f2f2f] cursor-pointer"
+                            onClick={() => handleBasicStudyCheck(text.id, !text.completed)}
+                          >
+                            <div className={`w-1.5 h-1.5 rounded-full ${text.completed ? 'bg-amber-300' : 'bg-amber-300/50'}`} />
+                            <span className="text-xs text-gray-400 truncate max-w-[100px]">{text.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <Search 
+                          size={20} 
+                          className={usedSessions['살펴보기'] ? 'text-blue-300' : 'text-gray-500'} 
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-wrap gap-2">
+                        {sectorRanks.map((sector) => (
+                          <div 
+                            key={sector.id} 
+                            className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#2f2f2f] cursor-pointer"
+                            onClick={() => handleSectorCheck(sector.id, !sector.checked)}
+                          >
+                            <div className={`w-1.5 h-1.5 rounded-full ${sector.checked ? 'bg-blue-300' : 'bg-blue-300/50'}`} />
+                            <span className="text-xs text-gray-400 truncate max-w-[100px]">{sector.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <TrendingUp 
+                          size={20} 
+                          className={usedSessions['투자시작하기'] ? 'text-green-300' : 'text-gray-500'} 
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-wrap items-center gap-2">
+                        {currentStep?.subTasks.map((task, index) => (
+                          <React.Fragment key={task.id}>
+                            <div 
+                              className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#2f2f2f] cursor-pointer"
+                              onClick={() => handleSubTaskComplete(task.id, !task.completed)}
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full ${task.completed ? 'bg-green-300' : 'bg-green-300/50'}`} />
+                              <span className="text-xs text-gray-400 truncate max-w-[100px]">{task.title}</span>
+                            </div>
+                            {index < currentStep.subTasks.length - 1 && (
+                              <svg 
+                                width="16" 
+                                height="16" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                className="text-green-300/50"
+                              >
+                                <path 
+                                  d="M5 12h14M13 5l7 7-7 7" 
+                                  stroke="currentColor" 
+                                  strokeWidth="2" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <ChartBar 
+                          size={20} 
+                          className={usedSessions['분석하기'] ? 'text-pink-300' : 'text-gray-500'} 
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-wrap gap-2">
+                        {myETFs.map((etf) => (
+                          <div 
+                            key={etf.code} 
+                            className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#2f2f2f]"
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-pink-300/50" />
+                            <span className="text-xs text-gray-400 truncate max-w-[100px]">{etf.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </nav>
-                )}
-              </div>
-            </header>
+                </div>
+              </header>
+            ) : null}
 
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -778,8 +910,8 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                   </div>
                 ) : activeSession === 'home' ? (
                   <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-shrink-0 py-6 px-6">
-                      <div className="text-center mb-6">
+                    <div className="flex-shrink-0 py-12 px-8">
+                      <div className="text-center mb-8">
                         <h2 className="text-3xl font-bold text-gray-200 mb-2">
                           당신의 ETF 투자 파트너
                         </h2>
@@ -787,133 +919,171 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                           무엇을 도와드릴까요?
                         </p>
                       </div>
-                      <div className="max-w-xl mx-auto mb-6">
-                        <div className="relative">
-                          <div className="absolute inset-0 rounded-lg overflow-hidden">
-                            <div 
-                              className="w-[200%] h-[200%] absolute top-[-50%] left-[-50%]"
-                              style={{
-                                background: hoverColor || defaultGradient,
-                                filter: 'blur(8px)',
-                                opacity: 0.8,
-                                animation: 'spin 8s linear infinite'
-                              }}
-                            />
+                      <div className="max-w-6xl mx-auto">
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* 기초공부하기 섹션 */}
+                          <div className="bg-[#242424] rounded-xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="w-10 h-10 rounded-lg bg-amber-300/10 flex items-center justify-center">
+                                <Book size={20} className="text-amber-300" />
+                              </div>
+                              <h3 className="text-xl font-bold text-gray-200">기초공부하기</h3>
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-400">학습 진행률</span>
+                                <span className="text-sm text-amber-300">32%</span>
+                              </div>
+                              <div className="h-1.5 bg-[#2f2f2f] rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-300 rounded-full w-[32%]" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-[#2f2f2f] rounded-lg p-2">
+                                  <div className="text-xs text-gray-400 mb-1">최근 학습</div>
+                                  <div className="text-sm text-amber-300">ETF 추적오차율</div>
+                                </div>
+                                <div className="bg-[#2f2f2f] rounded-lg p-2">
+                                  <div className="text-xs text-gray-400 mb-1">남은 학습</div>
+                                  <div className="text-sm text-gray-300">5개 챕터</div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div 
-                            className="absolute inset-[1px] rounded-lg"
-                            style={{
-                              background: 'linear-gradient(180deg, rgba(36,36,36,0.7) 0%, rgba(36,36,36,0.8) 100%)'
-                            }}
-                          />
-                          <div className="relative p-[1px]">
-                            <ChatInput 
-                              onSendMessage={handleSendMessage}
-                              placeholder="ETFy가 도와드릴게요."
-                              disabled={isLoading}
-                              context={activeSession}
-                              onNextCards={handleNextCards}
-                            />
+
+                          {/* 투자시작하기 섹션 */}
+                          <div className="bg-[#242424] rounded-xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="w-10 h-10 rounded-lg bg-green-300/10 flex items-center justify-center">
+                                <TrendingUp size={20} className="text-green-300" />
+                              </div>
+                              <h3 className="text-xl font-bold text-gray-200">투자시작하기</h3>
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-400">투자 준비도</span>
+                                <span className="text-sm text-green-300">45%</span>
+                              </div>
+                              <div className="h-1.5 bg-[#2f2f2f] rounded-full overflow-hidden">
+                                <div className="h-full bg-green-300 rounded-full w-[45%]" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-[#2f2f2f] rounded-lg p-2">
+                                  <div className="text-xs text-gray-400 mb-1">현재 단계</div>
+                                  <div className="text-sm text-green-300">계좌 개설</div>
+                                </div>
+                                <div className="bg-[#2f2f2f] rounded-lg p-2">
+                                  <div className="text-xs text-gray-400 mb-1">다음 단계</div>
+                                  <div 
+                                    className="text-sm text-gray-300 cursor-pointer hover:text-green-300 transition-colors"
+                                    onClick={() => {
+                                      console.log('투자성향테스트 클릭됨');
+                                      setActiveSession('investmentStyle');
+                                    }}
+                                  >
+                                    투자성향 분석
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 살펴보기 섹션 */}
+                          <div className="bg-[#242424] rounded-xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="w-10 h-10 rounded-lg bg-blue-300/10 flex items-center justify-center">
+                                <Search size={20} className="text-blue-300" />
+                              </div>
+                              <h3 className="text-xl font-bold text-gray-200">살펴보기</h3>
+                            </div>
+                            <div className="space-y-4">
+                              <div className="text-sm text-gray-400 mb-2">실시간 인기 섹터</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {sectorRanks.slice(0, 4).map((sector) => (
+                                  <div key={sector.id} className="bg-[#2f2f2f] rounded-lg p-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-gray-400">{sector.name}</span>
+                                      <span className={`text-xs ${sector.change >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                                        {sector.change > 0 ? '+' : ''}{sector.change}%
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-gray-500">{sector.etfs[0].name}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 분석하기 섹션 */}
+                          <div className="bg-[#242424] rounded-xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="w-10 h-10 rounded-lg bg-pink-300/10 flex items-center justify-center">
+                                <ChartBar size={20} className="text-pink-300" />
+                              </div>
+                              <h3 className="text-xl font-bold text-gray-200">분석하기</h3>
+                            </div>
+                            <div className="space-y-4">
+                              <div className="text-sm text-gray-400 mb-2">보유 ETF 현황</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {myETFs.map((etf) => (
+                                  <div key={etf.code} className="bg-[#2f2f2f] rounded-lg p-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-gray-400">{etf.name}</span>
+                                      <span className={`text-xs ${etf.change >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                                        {etf.change > 0 ? '+' : ''}{etf.change}%
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-gray-500">
+                                      {etf.amount}주 / {etf.currentPrice.toLocaleString()}원
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      {/* 카드 섹션 */}
-                      <div className="grid grid-cols-2 gap-6">
-                        <DashboardCard
-                          title="기초공부하기"
-                          content={
-                            <div className="flex flex-col h-full p-3 w-full">
-                              <div className="flex items-center justify-between text-amber-300 mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg">📖</span>
-                                  <p className="text-xs whitespace-nowrap">최근 학습한 용어</p>
-                                </div>
-                              </div>
-                              <div className="min-h-[40px] relative">
-                                <p className="text-gray-300 text-sm group-hover:hidden absolute">ETF 추적오차율</p>
-                                <p className="text-gray-300 text-xs leading-relaxed hidden group-hover:block absolute">
-                                  목표와 실제 성적이 얼마나 다른지 알려주는 숫자
-                                </p>
-                              </div>
-                              <div className="flex gap-2 mt-auto w-full">
-                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">레버리지</span>
-                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">인버스</span>
-                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">시총가중</span>
-                              </div>
-                            </div>
-                          }
-                          icon={<Book size={20} />}
-                          style={cardStyles['기초공부하기']}
-                          onClick={() => handleCardClick('기초공부하기')}
-                          onMouseEnter={() => setHoverColor(yellowGradient)}
-                          onMouseLeave={() => setHoverColor(null)}
+                    {/* 채팅 입력창 추가 */}
+                    <div className="flex-shrink-0 p-6 relative">
+                      <div className="max-w-3xl mx-auto">
+                        <ChatInput 
+                          onSendMessage={handleSendMessage}
+                          placeholder="ETFy가 도와드릴게요."
+                          disabled={isLoading}
+                          context={activeSession}
+                          onNextCards={handleNextCards}
+                          onFocus={() => setShowExampleQuestions(true)}
+                          onBlur={() => setTimeout(() => setShowExampleQuestions(false), 200)}
                         />
-
-                        <DashboardCard
-                          title="투자시작하기"
-                          content={
-                            <div className="flex flex-col h-full p-3 w-full">
-                              <div className="flex items-center justify-between text-green-300 mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg">💡</span>
-                                  <p className="text-xs whitespace-nowrap">새로운 투자 방법</p>
-                                </div>
-                              </div>
-                              <p className="text-gray-300 text-sm mb-2">ISA 계좌로 ETF 투자하기</p>
-                              <div className="flex gap-2 mt-auto w-full">
-                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">계좌개설</span>
-                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">투자성향</span>
-                                <span className="flex-1 text-center truncate px-2 py-1.5 bg-[#242424] rounded-full text-xs text-gray-300 cursor-help">매매하기</span>
-                              </div>
+                        
+                        {/* 예시 질문 팝업 */}
+                        <div 
+                          className={`absolute bottom-full left-0 right-0 mb-2 px-6 transform transition-all duration-200 ease-out ${
+                            showExampleQuestions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+                          }`}
+                        >
+                          <div className="max-w-3xl mx-auto">
+                            <div className="grid grid-cols-4 gap-2 recommendation-questions">
+                              {exampleQuestions.map((example) => (
+                                <button
+                                  key={example.id}
+                                  className={`p-2.5 rounded-2xl ${example.color} 
+                                    transition-all duration-200 ease-out text-left
+                                    hover:scale-[1.02] hover:brightness-110`}
+                                  onClick={() => {
+                                    handleSendMessage(example.question, example.id);
+                                    setShowExampleQuestions(false);
+                                  }}
+                                >
+                                  <p className="text-sm text-[#1f1f1f] font-medium">
+                                    {example.question}
+                                  </p>
+                                </button>
+                              ))}
                             </div>
-                          }
-                          icon={<TrendingUp size={20} />}
-                          style={cardStyles['투자시작하기']}
-                          onClick={() => handleCardClick('투자시작하기')}
-                          onMouseEnter={() => setHoverColor(greenGradient)}
-                          onMouseLeave={() => setHoverColor(null)}
-                        />
-
-                        <DashboardCard
-                          title="살펴보기"
-                          content={
-                            <div className="flex flex-col h-full p-3 w-full">
-                              <div className="flex items-center justify-between text-blue-300 mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg">🔥</span>
-                                  <p className="text-xs whitespace-nowrap">실간 HOT</p>
-                                </div>
-                              </div>
-                              <p className="text-gray-300 text-sm">AI 테마 ETF 급등 원인 분석</p>
-                            </div>
-                          }
-                          icon={<Search size={20} />}
-                          style={cardStyles['살펴보기']}
-                          onClick={() => handleCardClick('살펴보기')}
-                          onMouseEnter={() => setHoverColor(blueGradient)}
-                          onMouseLeave={() => setHoverColor(null)}
-                        />
-
-                        <DashboardCard
-                          title="분석하기"
-                          content={
-                            <div className="flex flex-col h-full p-3 w-full">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs text-gray-300">KODEX 200</span>
-                                <span className="text-xs text-green-400">+2.0%</span>
-                              </div>
-                              <div className="flex-1">
-                                <SimpleLineChart />
-                              </div>
-                            </div>
-                          }
-                          icon={<ChartBar size={20} />}
-                          style={cardStyles['분석하기']}
-                          onClick={() => handleCardClick('분석하기')}
-                          onMouseEnter={() => setHoverColor(pinkGradient)}
-                          onMouseLeave={() => setHoverColor(null)}
-                        />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -946,22 +1116,25 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
               </div>
 
               {/* RightPanel 부분 */}
-              <div className="w-80 flex-shrink-0 bg-[#242424] border-l border-[#2f2f2f] flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-6">
-                    <RightPanel 
-                      activeSession={activeSession}
-                      currentReferences={currentReferences}
-                      relatedTopics={relatedTopics}
-                      onTopicClick={handleSendMessage}
-                      currentStep={currentStep}
-                      onSubTaskComplete={handleSubTaskComplete}
-                      selectedTexts={selectedTexts}
-                      onSectorSelect={handleSectorSelect}
-                      allSteps={allInvestmentSteps}
-                      currentStepIndex={currentStepIndex}
-                    />
-                  </div>
+              <div className="w-80 flex-shrink-0 bg-[#242424] border-l border-[#2f2f2f] overflow-hidden">
+                <div className="h-full">
+                  <RightPanel 
+                    activeSession={activeSession}
+                    currentReferences={currentReferences}
+                    relatedTopics={relatedTopics}
+                    onTopicClick={setActiveSession}
+                    currentStep={currentStep}
+                    onSubTaskComplete={handleSubTaskComplete}
+                    selectedTexts={selectedTexts}
+                    onSectorSelect={handleSectorSelect}
+                    allSteps={allInvestmentSteps}
+                    currentStepIndex={currentStepIndex}
+                    handleGenerateReport={handleGenerateReport}
+                    sessionMessages={sessionMessages}
+                    sectorRanks={sectorRanks}
+                    myETFs={myETFs}
+                    onSectorCheck={handleSectorCheck}
+                  />
                 </div>
               </div>
             </div>

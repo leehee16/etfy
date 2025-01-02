@@ -141,7 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
                   <Archive className="w-4 h-4" />
                 </div>
                 <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
-                  아카이브
+                  보고서 아카이브
                 </div>
               </button>
             </li>

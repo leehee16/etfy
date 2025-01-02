@@ -48,11 +48,13 @@ const styles = `
 `;
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, context: string) => void;
   placeholder?: string;
   disabled?: boolean;
-  context?: string;
-  onNextCards?: (cards: Array<{ title: string; content: string }>, imageDescription: string) => void;
+  context: string;
+  onNextCards?: (cards: Array<{ title: string; content: string }>, imageDescription?: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -60,7 +62,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
   placeholder = '메시지를 입력하세요...',
   disabled = false,
   context = '기초공부하기',
-  onNextCards
+  onNextCards,
+  onFocus,
+  onBlur
 }) => {
   const [message, setMessage] = useState('');
   const [isContextChanging, setIsContextChanging] = useState(false);
@@ -80,7 +84,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSendMessage(message);
+      onSendMessage(message, context);
       setMessage('');
     }
   };
@@ -111,7 +115,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         onNextCards(data.nextCards, data.imageDescription);
         // 첫 번째 질문을 채팅 메시지로 전송
         if (data.nextCards[0]?.content) {
-          onSendMessage(data.nextCards[0].content);
+          onSendMessage(data.nextCards[0].content, context);
         }
       }
 
@@ -122,6 +126,47 @@ const ChatInput: React.FC<ChatInputProps> = ({
       setIsProcessingImage(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    const imageItem = Array.from(items).find(item => item.type.startsWith('image'));
+
+    if (imageItem) {
+      e.preventDefault();
+      setIsProcessingImage(true);
+
+      try {
+        const file = imageItem.getAsFile();
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch('/api/analyzeImage', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('이미지 분석에 실패했습니다.');
+        }
+
+        const data = await response.json();
+        
+        if (data.nextCards && onNextCards) {
+          onNextCards(data.nextCards, data.imageDescription);
+          if (data.nextCards[0]?.content) {
+            onSendMessage(data.nextCards[0].content, context);
+          }
+        }
+      } catch (error) {
+        console.error('이미지 처리 중 오류:', error);
+        alert('이미지 처리 중 오류가 발생했습니다.');
+      } finally {
+        setIsProcessingImage(false);
       }
     }
   };
@@ -156,9 +201,23 @@ const ChatInput: React.FC<ChatInputProps> = ({
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (message.trim() && !disabled) {
-                  onSendMessage(message);
+                  onSendMessage(message, context);
                   setMessage('');
                 }
+              }
+            }}
+            onPaste={handlePaste}
+            onFocus={() => {
+              if (onFocus) onFocus();
+            }}
+            onBlur={(e) => {
+              // 클릭된 요소가 추천 질문 영역 내부인지 확인
+              const clickedElement = e.relatedTarget as HTMLElement;
+              const isClickingRecommendation = clickedElement?.closest('.recommendation-questions');
+              
+              // 추천 질문을 클릭한 경우가 아닐 때만 blur 처리
+              if (!isClickingRecommendation && onBlur) {
+                setTimeout(() => onBlur(), 100);
               }
             }}
           />

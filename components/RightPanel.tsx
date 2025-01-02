@@ -4,6 +4,7 @@ import FadeIn from './FadeIn';
 import Image from 'next/image';
 import InvestmentProgress from './InvestmentProgress';
 import { Checkbox } from './Checkbox';
+import { Book, TrendingUp, Search, BarChartIcon as ChartBar, FileText } from 'lucide-react';
 
 interface SubTask {
   id: string;
@@ -59,6 +60,11 @@ interface RightPanelProps {
     subTasks: SubTask[];
   }>;
   currentStepIndex?: number;
+  handleGenerateReport: () => void;
+  sessionMessages: Record<string, any[]>;
+  sectorRanks: SectorRank[];
+  myETFs: MyETF[];
+  onSectorCheck: (sectorId: string, checked: boolean) => void;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
@@ -71,61 +77,15 @@ const RightPanel: React.FC<RightPanelProps> = ({
   selectedTexts = [],
   onSectorSelect,
   allSteps,
-  currentStepIndex
+  currentStepIndex,
+  handleGenerateReport,
+  sessionMessages,
+  sectorRanks,
+  myETFs,
+  onSectorCheck
 }) => {
   const [userName, setUserName] = useState('');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
-  const [sectorRanks, setSectorRanks] = useState<SectorRank[]>([
-    {
-      id: '1',
-      name: '반도체',
-      change: 2.5,
-      checked: false,
-      etfs: [
-        { name: 'KODEX 반도체', code: '305720', change: 2.8 },
-        { name: 'TIGER 반도체', code: '139260', change: 2.3 }
-      ]
-    },
-    {
-      id: '2',
-      name: '2차전지',
-      change: 1.8,
-      checked: false,
-      etfs: [
-        { name: 'KODEX 2차전지산업', code: '305540', change: 1.9 },
-        { name: 'TIGER 2차전지테마', code: '305540', change: 1.7 }
-      ]
-    },
-    {
-      id: '3',
-      name: '바이오',
-      change: -0.5,
-      checked: false,
-      etfs: [
-        { name: 'KODEX 바이오', code: '244580', change: -0.3 },
-        { name: 'TIGER 헬스케어', code: '227910', change: -0.7 }
-      ]
-    }
-  ]);
-
-  const [myETFs] = useState<MyETF[]>([
-    {
-      name: 'KODEX 200',
-      code: '069500',
-      purchasePrice: 35750,
-      currentPrice: 36800,
-      change: 2.94,
-      amount: 10
-    },
-    {
-      name: 'TIGER 차이나전기차',
-      code: '371460',
-      purchasePrice: 12850,
-      currentPrice: 12100,
-      change: -5.84,
-      amount: 20
-    }
-  ]);
 
   useEffect(() => {
     const userStr = sessionStorage.getItem('currentUser');
@@ -170,13 +130,12 @@ const RightPanel: React.FC<RightPanelProps> = ({
     const updatedSectors = sectorRanks.map(sector => 
       sector.id === sectorId ? { ...sector, checked } : sector
     );
-    setSectorRanks(updatedSectors);
     onSectorSelect?.(updatedSectors);
   };
 
   if (activeSession === 'home') {
     return (
-      <>
+      <div className="p-6 pt-12">
         <h3 className="text-2xl font-bold mb-4">
           <FadeIn 
             text={`${userName}님`}
@@ -238,188 +197,227 @@ const RightPanel: React.FC<RightPanelProps> = ({
             </button>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* 기초공부하기 컨텍스트의 선택한 내용 */}
-      {activeSession === '기초공부하기' && selectedTexts && selectedTexts.length > 0 && (
-        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-xl font-bold text-amber-300">스크랩</h3>
-          </div>
-          <div className="space-y-3">
-            {selectedTexts.map((task) => (
-              <div key={task.id} className="flex items-start gap-3 p-2 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all">
-                <Checkbox
-                  id={task.id}
-                  checked={task.completed}
-                  onCheckedChange={(checked) => {
-                    onSubTaskComplete?.(task.id, checked);
-                  }}
-                  className="mt-1 text-amber-300"
-                />
-                <div className="flex-1">
-                  <label
-                    htmlFor={task.id}
-                    className={`text-sm font-medium cursor-pointer ${
-                      task.completed ? 'text-amber-300' : 'text-gray-200'
-                    }`}
-                  >
-                    {task.title}
-                  </label>
-                  {task.description && (
-                    <p className="text-xs text-gray-400 mt-0.5">{task.description}</p>
-                  )}
-                </div>
-              </div>
+    <div className="flex flex-col h-full p-6">
+      {activeSession !== 'home' && activeSession !== 'admin' && (
+        <div className="flex-shrink-0 border-b border-[#2f2f2f] pb-4 space-y-4">
+          <nav className="flex items-center justify-between">
+            {[
+              { id: '기초공부하기', icon: <Book size={16} /> },
+              { id: '투자시작하기', icon: <TrendingUp size={16} /> },
+              { id: '살펴보기', icon: <Search size={16} /> },
+              { id: '분석하기', icon: <ChartBar size={16} /> }
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onTopicClick(item.id)}
+                className={`
+                  p-2 rounded-lg transition-colors flex flex-col items-center gap-1
+                  ${activeSession === item.id ? 'bg-[#2f2f2f] text-gray-200' : 'text-gray-400 hover:text-gray-300'}
+                `}
+              >
+                {item.icon}
+                <span className="text-xs font-medium">{item.id}</span>
+              </button>
             ))}
-          </div>
+          </nav>
+          <button
+            onClick={handleGenerateReport}
+            className="w-full p-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-gray-400 hover:text-gray-300 hover:bg-[#2f2f2f]/50"
+          >
+            <FileText size={16} className="text-purple-300" />
+            <span className="text-xs font-medium">보고서 생성</span>
+            {Object.values(sessionMessages).some(messages => messages.length > 0) && (
+              <div className="flex items-center justify-center w-4 h-4 rounded-full bg-purple-300/20 text-purple-300 text-xs">
+                {Object.values(sessionMessages).reduce((sum, messages) => sum + messages.length, 0)}
+              </div>
+            )}
+          </button>
         </div>
       )}
 
-      {/* 투자시작하기 컨텍스트의 진행상황 */}
-      {activeSession === '투자시작하기' && currentStep && (
-        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-xl font-bold text-green-300">진행 절차에요</h3>
-          </div>
-          <InvestmentProgress
-            currentStep={currentStep}
-            onSubTaskComplete={onSubTaskComplete}
-            allSteps={allSteps}
-            currentStepIndex={currentStepIndex}
-          />
-        </div>
-      )}
-
-      {/* 살펴보기 컨텍스트의 섹터 순위 */}
-      {activeSession === '살펴보기' && (
-        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-xl font-bold text-blue-300">오늘의 섹터는?</h3>
-          </div>
-          <div className="space-y-3">
-            {sectorRanks.map((sector) => (
-              <div key={sector.id}>
-                <div className="flex items-start gap-3 p-2 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all cursor-pointer"
-                     onClick={() => setSelectedSector(selectedSector === sector.id ? null : sector.id)}>
+      <div className="flex-1 overflow-y-auto space-y-6 mt-4">
+        {/* 기초공부하기 컨텍스트의 선택한 내용 */}
+        {activeSession === '기초공부하기' && selectedTexts && selectedTexts.length > 0 && (
+          <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xl font-bold text-amber-300">스크랩</h3>
+            </div>
+            <div className="space-y-3">
+              {selectedTexts.map((task) => (
+                <div key={task.id} className="flex items-start gap-3 p-2 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all">
                   <Checkbox
-                    id={sector.id}
-                    checked={sector.checked}
-                    onCheckedChange={(checked) => handleSectorCheck(sector.id, checked)}
-                    className="mt-1 text-blue-300"
+                    id={task.id}
+                    checked={task.completed}
+                    onCheckedChange={(checked) => {
+                      onSubTaskComplete?.(task.id, checked);
+                    }}
+                    className="mt-1 text-amber-300"
                   />
                   <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-200">
-                        {sector.name}
-                      </span>
-                      <span className={`text-sm font-medium ${
-                        sector.change > 0 ? 'text-red-400' : 'text-blue-400'
-                      }`}>
-                        {sector.change > 0 ? '+' : ''}{sector.change}%
-                      </span>
-                    </div>
+                    <label
+                      htmlFor={task.id}
+                      className={`text-sm font-medium cursor-pointer ${
+                        task.completed ? 'text-amber-300' : 'text-gray-200'
+                      }`}
+                    >
+                      {task.title}
+                    </label>
+                    {task.description && (
+                      <p className="text-xs text-gray-400 mt-0.5">{task.description}</p>
+                    )}
                   </div>
                 </div>
-                {selectedSector === sector.id && (
-                  <div className="mt-2 ml-8 space-y-2">
-                    {sector.etfs.map((etf, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 rounded-lg bg-[#1f1f1f]/50">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-gray-200">{etf.name}</span>
-                          <span className="text-xs text-gray-400">{etf.code}</span>
-                        </div>
-                        <span className={`text-sm ${
-                          etf.change > 0 ? 'text-red-400' : 'text-blue-400'
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 투자시작하기 컨텍스트의 진행상황 */}
+        {activeSession === '투자시작하기' && currentStep && (
+          <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xl font-bold text-green-300">진행 절차에요</h3>
+            </div>
+            <InvestmentProgress
+              currentStep={currentStep}
+              onSubTaskComplete={onSubTaskComplete}
+              allSteps={allSteps}
+              currentStepIndex={currentStepIndex}
+            />
+          </div>
+        )}
+
+        {/* 살펴보기 컨텍스트의 섹터 순위 */}
+        {activeSession === '살펴보기' && (
+          <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xl font-bold text-blue-300">오늘의 섹터는?</h3>
+            </div>
+            <div className="space-y-3">
+              {sectorRanks.map((sector) => (
+                <div key={sector.id}>
+                  <div className="flex items-start gap-3 p-2 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all cursor-pointer"
+                       onClick={() => setSelectedSector(selectedSector === sector.id ? null : sector.id)}>
+                    <Checkbox
+                      id={sector.id}
+                      checked={sector.checked}
+                      onCheckedChange={(checked) => handleSectorCheck(sector.id, checked)}
+                      className="mt-1 text-blue-300"
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-200">
+                          {sector.name}
+                        </span>
+                        <span className={`text-sm font-medium ${
+                          sector.change > 0 ? 'text-red-400' : 'text-blue-400'
                         }`}>
-                          {etf.change > 0 ? '+' : ''}{etf.change}%
+                          {sector.change > 0 ? '+' : ''}{sector.change}%
                         </span>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                  {selectedSector === sector.id && (
+                    <div className="mt-2 ml-8 space-y-2">
+                      {sector.etfs.map((etf, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 rounded-lg bg-[#1f1f1f]/50">
+                          <div className="flex flex-col">
+                            <span className="text-sm text-gray-200">{etf.name}</span>
+                            <span className="text-xs text-gray-400">{etf.code}</span>
+                          </div>
+                          <span className={`text-sm ${
+                            etf.change > 0 ? 'text-red-400' : 'text-blue-400'
+                          }`}>
+                            {etf.change > 0 ? '+' : ''}{etf.change}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 분석하기 컨텍스트의 내 ETF 목록 */}
-      {activeSession === '분석하기' && (
-        <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-xl font-bold text-pink-300">내 ETF</h3>
-          </div>
-          <div className="space-y-3">
-            {myETFs.map((etf, index) => (
-              <div key={index} className="p-3 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-200">{etf.name}</span>
-                    <span className="text-xs text-gray-400">{etf.code}</span>
+        {/* 분석하기 컨텍스트의 내 ETF 목록 */}
+        {activeSession === '분석하기' && (
+          <div className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f]/50 transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xl font-bold text-pink-300">내 ETF</h3>
+            </div>
+            <div className="space-y-3">
+              {myETFs.map((etf, index) => (
+                <div key={index} className="p-3 rounded-lg bg-[#1f1f1f] hover:bg-[#2f2f2f] transition-all">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-200">{etf.name}</span>
+                      <span className="text-xs text-gray-400">{etf.code}</span>
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      etf.change > 0 ? 'text-red-400' : 'text-blue-400'
+                    }`}>
+                      {etf.change > 0 ? '+' : ''}{etf.change}%
+                    </span>
                   </div>
-                  <span className={`text-sm font-medium ${
-                    etf.change > 0 ? 'text-red-400' : 'text-blue-400'
-                  }`}>
-                    {etf.change > 0 ? '+' : ''}{etf.change}%
-                  </span>
+                  <div className="mt-2 flex justify-between text-xs text-gray-400">
+                    <span>보유 {etf.amount}주</span>
+                    <span>평균 {etf.purchasePrice.toLocaleString()}원</span>
+                    <span>현재 {etf.currentPrice.toLocaleString()}원</span>
+                  </div>
                 </div>
-                <div className="mt-2 flex justify-between text-xs text-gray-400">
-                  <span>보유 {etf.amount}주</span>
-                  <span>평균 {etf.purchasePrice.toLocaleString()}원</span>
-                  <span>현재 {etf.currentPrice.toLocaleString()}원</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 참고자료 섹션 */}
+        {currentReferences.length > 0 && (
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-200">참고했어요</h3>
+            <div className="space-y-4">
+              {currentReferences.map((ref, index) => (
+                <div key={index} className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f] transition-colors">
+                  {ref.imageUrl && (
+                    <img src={ref.imageUrl} alt={ref.title} className="w-full h-40 object-cover rounded-lg mb-3" />
+                  )}
+                  <h4 className="font-medium text-gray-200 mb-2">{ref.title}</h4>
+                  <p className="text-sm text-gray-400">{ref.description}</p>
+                  {ref.url && (
+                    <a href={ref.url} target="_blank" rel="noopener noreferrer" 
+                       className="text-blue-400 hover:text-blue-300 text-sm mt-2 block">
+                      자세히 보기
+                    </a>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 참고자료 섹션 */}
-      {currentReferences.length > 0 && (
-        <div>
-          <h3 className="text-2xl font-bold mb-4 text-gray-200">참고했어요</h3>
-          <div className="space-y-4">
-            {currentReferences.map((ref, index) => (
-              <div key={index} className="border border-[#2f2f2f] rounded-lg p-4 hover:bg-[#2f2f2f] transition-colors">
-                {ref.imageUrl && (
-                  <img src={ref.imageUrl} alt={ref.title} className="w-full h-40 object-cover rounded-lg mb-3" />
-                )}
-                <h4 className="font-medium text-gray-200 mb-2">{ref.title}</h4>
-                <p className="text-sm text-gray-400">{ref.description}</p>
-                {ref.url && (
-                  <a href={ref.url} target="_blank" rel="noopener noreferrer" 
-                     className="text-blue-400 hover:text-blue-300 text-sm mt-2 block">
-                    자세히 보기
-                  </a>
-                )}
-              </div>
-            ))}
+        {/* 관련 주제 섹션 */}
+        {relatedTopics.length > 0 && (
+          <div>
+            <h3 className="text-xl font-bold mb-4 text-gray-200">관련 주제</h3>
+            <ul className="space-y-2">
+              {relatedTopics.map((topic, index) => (
+                <li 
+                  key={index}
+                  className="text-gray-300 hover:text-gray-200 cursor-pointer"
+                  onClick={() => onTopicClick(topic)}
+                >
+                  # {topic}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      )}
-
-      {/* 관련 주제 섹션 */}
-      {relatedTopics.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold mb-4 text-gray-200">관련 주제</h3>
-          <ul className="space-y-2">
-            {relatedTopics.map((topic, index) => (
-              <li 
-                key={index}
-                className="text-gray-300 hover:text-gray-200 cursor-pointer"
-                onClick={() => onTopicClick(topic)}
-              >
-                # {topic}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

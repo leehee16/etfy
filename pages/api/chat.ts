@@ -158,65 +158,81 @@ const transformSearchResults = (results: Document[]): AIResponse['references'] =
 
 // 체인 정의
 const chain = RunnableSequence.from([
-  {
-    context: (input: ChatRequest) => input.context || '',
-    message: (input: ChatRequest) => input.message,
-    chat_history: (input: ChatRequest) => {
-      const recentMessages = input.messages ? 
-        input.messages.slice(-8) : 
-        [];
-      return formatChatHistory(recentMessages);
-    },
-    references: async (input: ChatRequest) => {
-      const docs = await retrieveRelatedDocs(input.message);
-      const searchResults = transformSearchResults(docs);
-      return JSON.stringify(searchResults);
-    },
-    contextInfo: (input: ChatRequest) => {
-      const info = [];
-      
-      // 기초공부하기 컨텍스트의 선택된 텍스트
-      if (input.context === '기초공부하기' && input.selectedTexts?.length > 0) {
-        info.push(`선택된 학습 내용:\n${input.selectedTexts
-          .filter(text => text.completed)
-          .map(text => `- ${text.title}: ${text.description}`)
-          .join('\n')}`);
-      }
-      
-      // 투자시작하기 컨텍스트의 진행 상황
-      if (input.context === '투자시작하기' && input.currentStep) {
-        const completedTasks = input.currentStep.subTasks
-          .filter(task => task.completed)
-          .map(task => `- ${task.title}: ${task.description}`);
-        if (completedTasks.length > 0) {
-          info.push(`현재 진행 상황 (${input.currentStep.title}):\n${completedTasks.join('\n')}`);
+  async (input: ChatRequest) => {
+    // 병렬로 처리할 작업들을 정의
+    const [
+      context,
+      message,
+      chatHistory,
+      references,
+      contextInfo
+    ] = await Promise.all([
+      Promise.resolve(input.context || ''),
+      Promise.resolve(input.message),
+      Promise.resolve().then(() => {
+        const recentMessages = input.messages ? 
+          input.messages.slice(-8) : 
+          [];
+        return formatChatHistory(recentMessages);
+      }),
+      retrieveRelatedDocs(input.message).then(docs => {
+        const searchResults = transformSearchResults(docs);
+        return JSON.stringify(searchResults);
+      }),
+      Promise.resolve().then(() => {
+        const info = [];
+        
+        // 기초공부하기 컨텍스트의 선택된 텍스트
+        if (input.context === '기초공부하기' && input.selectedTexts?.length > 0) {
+          info.push(`선택된 학습 내용:\n${input.selectedTexts
+            .filter(text => text.completed)
+            .map(text => `- ${text.title}: ${text.description}`)
+            .join('\n')}`);
         }
-      }
-      
-      // 살펴보기 컨텍스트의 선택된 섹터
-      if (input.context === '살펴보기' && input.selectedSectors?.length > 0) {
-        const selectedSectorInfo = input.selectedSectors
-          .filter(sector => sector.checked)
-          .map(sector => 
-            `- ${sector.name} (${sector.change > 0 ? '+' : ''}${sector.change}%)\n  ETFs: ${
-              sector.etfs.map(etf => `${etf.name} (${etf.code})`).join(', ')
-            }`
-          );
-        if (selectedSectorInfo.length > 0) {
-          info.push(`선택된 섹터:\n${selectedSectorInfo.join('\n')}`);
+        
+        // 투자시작하기 컨텍스트의 진행 상황
+        if (input.context === '투자시작하기' && input.currentStep) {
+          const completedTasks = input.currentStep.subTasks
+            .filter(task => task.completed)
+            .map(task => `- ${task.title}: ${task.description}`);
+          if (completedTasks.length > 0) {
+            info.push(`현재 진행 상황 (${input.currentStep.title}):\n${completedTasks.join('\n')}`);
+          }
         }
-      }
-      
-      // 분석하기 컨텍스트의 선택된 ETF
-      if (input.context === '분석하기' && input.selectedETFs?.length > 0) {
-        info.push(`선택된 ETF:\n${input.selectedETFs
-          .map(etf => 
-            `- ${etf.name} (${etf.code})\n  보유: ${etf.amount}주, 평균단가: ${etf.purchasePrice.toLocaleString()}원, 현재가: ${etf.currentPrice.toLocaleString()}원 (${etf.change > 0 ? '+' : ''}${etf.change}%)`
-          ).join('\n')}`);
-      }
-      
-      return info.join('\n\n');
-    }
+        
+        // 살펴보기 컨텍스트의 선택된 섹터
+        if (input.context === '살펴보기' && input.selectedSectors?.length > 0) {
+          const selectedSectorInfo = input.selectedSectors
+            .filter(sector => sector.checked)
+            .map(sector => 
+              `- ${sector.name} (${sector.change > 0 ? '+' : ''}${sector.change}%)\n  ETFs: ${
+                sector.etfs.map(etf => `${etf.name} (${etf.code})`).join(', ')
+              }`
+            );
+          if (selectedSectorInfo.length > 0) {
+            info.push(`선택된 섹터:\n${selectedSectorInfo.join('\n')}`);
+          }
+        }
+        
+        // 분석하기 컨텍스트의 선택된 ETF
+        if (input.context === '분석하기' && input.selectedETFs?.length > 0) {
+          info.push(`선택된 ETF:\n${input.selectedETFs
+            .map(etf => 
+              `- ${etf.name} (${etf.code})\n  보유: ${etf.amount}주, 평균단가: ${etf.purchasePrice.toLocaleString()}원, 현재가: ${etf.currentPrice.toLocaleString()}원 (${etf.change > 0 ? '+' : ''}${etf.change}%)`
+            ).join('\n')}`);
+        }
+        
+        return info.join('\n\n');
+      })
+    ]);
+
+    return {
+      context,
+      message,
+      chat_history: chatHistory,
+      references,
+      contextInfo
+    };
   },
   async (formattedInput) => {
     const systemTemplate = getTemplateByContext(formattedInput.context);
@@ -231,7 +247,9 @@ const chain = RunnableSequence.from([
       )
     ];
 
+    console.time('model_invoke');
     const response = await model.invoke(messages);
+    console.timeEnd('model_invoke');
     
     try {
       const contentStr = response.content;
@@ -309,13 +327,37 @@ export default async function handler(
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
+  const timing = {
+    start: Date.now(),
+    chainStart: 0,
+    chainEnd: 0,
+    modelStart: 0,
+    modelEnd: 0,
+  };
+
   try {
     const input = req.body;
+    
+    timing.chainStart = Date.now();
     const response = await chain.invoke(input);
+    timing.chainEnd = Date.now();
+
+    // 타이밍 로그
+    console.log('API 타이밍:', {
+      total: timing.chainEnd - timing.start,
+      chain: timing.chainEnd - timing.chainStart,
+      endpoint: req.url,
+      context: input.context,
+      messageLength: input.message.length,
+    });
 
     return res.status(200).json(response);
   } catch (error) {
     console.error('API 오류:', error);
+    console.log('실패 타이밍:', {
+      totalUntilError: Date.now() - timing.start,
+      chainDuration: timing.chainEnd ? timing.chainEnd - timing.chainStart : 0,
+    });
     return res.status(500).json({ error: '오류가 발생했습니다' });
   }
 } 

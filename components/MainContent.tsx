@@ -7,6 +7,7 @@ import ChatInput from './ChatInput';
 import dynamic from 'next/dynamic';
 import { useArchiveStore } from '@/lib/store/archiveStore';
 import Archive from './Archive';
+import InvestmentStyleTest from './InvestmentStyleTest';
 
 const defaultCurrentStep = {
   id: 1,
@@ -637,6 +638,14 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
             reports={reports}
             onReportClick={handleReportClick}
           />
+        </div>
+      );
+    }
+
+    if (activeSession === 'investmentStyle') {
+      return (
+        <div className="flex-1 overflow-y-auto bg-[#1f1f1f] p-6">
+          <InvestmentStyleTest />
         </div>
       );
     }

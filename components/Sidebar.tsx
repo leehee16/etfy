@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Home, BookOpen, BrainCircuit, HelpCircle, Archive, Settings, ChevronDown, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, BookOpen, BrainCircuit, HelpCircle, Archive, Settings, ChevronDown, FileText, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
 const LogoutButton = dynamic(() => import('./LogoutButton'), {
   ssr: false
@@ -21,7 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
   const [isUploading, setIsUploading] = useState(false);
 
   const handleLogoClick = () => {
-    fileInputRef.current?.click();
+    setActiveSession('home');
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,10 +101,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
                 </div>
               </button>
             </li>
+            <li>
+              <button 
+                onClick={() => setActiveSession('chat')} 
+                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
+              >
+                <div className="flex items-center justify-center w-5 h-5">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+                  잇삐랑 대화하기
+                </div>
+              </button>
+            </li>
             <li><hr className="border-[#2f2f2f] my-2" /></li>
             <li>
               <button 
-                onClick={() => setActiveSession('investmentStyle')} 
+                onClick={() => setActiveSession('investmentStyle')}
                 className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
               >
                 <div className="flex items-center justify-center w-5 h-5">
@@ -113,38 +127,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, setActiveSessi
                   <div className="flex items-center gap-2">
                     <span>투자성향 테스트</span>
                     <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-500 rounded-full">미완료</span>
-                  </div>
-                </div>
-              </button>
-            </li>
-            <li>
-              <button 
-                onClick={() => setActiveSession('investmentKnowledge')} 
-                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
-              >
-                <div className="flex items-center justify-center w-5 h-5">
-                  <BookOpen className="w-4 h-4" />
-                </div>
-                <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
-                  <div className="flex items-center gap-2">
-                    <span>투자지식 테스트</span>
-                    <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-500 rounded-full">미완료</span>
-                  </div>
-                </div>
-              </button>
-            </li>
-            <li>
-              <button 
-                onClick={() => setActiveSession('etfQuiz')} 
-                className="flex items-center w-full p-2 rounded hover:bg-[#2f2f2f] text-gray-300"
-              >
-                <div className="flex items-center justify-center w-5 h-5">
-                  <HelpCircle className="w-4 h-4" />
-                </div>
-                <div className={`ml-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
-                  <div className="flex items-center gap-2">
-                    <span>ETF 퀴즈</span>
-                    <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-500 rounded-full">생성중</span>
                   </div>
                 </div>
               </button>

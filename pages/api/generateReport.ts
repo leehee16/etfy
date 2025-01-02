@@ -24,30 +24,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { sessions, userId } = req.body;
 
-    // 세션 데이터를 문자열로 변환
-    const sessionsText = Object.entries(sessions)
-      .map(([context, data]: [string, any]) => {
-        const messages = data.messages
-          .map((msg: any) => {
-            let text = `${msg.role}: ${msg.content}`;
-            if (msg.selectedTexts?.length) {
-              text += `\n선택된 텍스트: ${msg.selectedTexts.join(', ')}`;
-            }
-            if (msg.selectedSectors?.length) {
-              text += `\n선택된 섹터: ${msg.selectedSectors.join(', ')}`;
-            }
-            if (msg.selectedETFs?.length) {
-              text += `\n선택된 ETF: ${msg.selectedETFs.join(', ')}`;
-            }
-            if (msg.currentStep) {
-              text += `\n현재 단계: ${msg.currentStep}`;
-            }
-            return text;
+    // 병렬로 처리할 작업들을 정의
+    const [sessionsText, metadata] = await Promise.all([
+      // 세션 데이터 변환
+      Promise.resolve().then(() => 
+        Object.entries(sessions)
+          .map(([context, data]: [string, any]) => {
+            const messages = data.messages
+              .map((msg: any) => {
+                let text = `${msg.role}: ${msg.content}`;
+                if (msg.selectedTexts?.length) {
+                  text += `\n선택된 텍스트: ${msg.selectedTexts.join(', ')}`;
+                }
+                if (msg.selectedSectors?.length) {
+                  text += `\n선택된 섹터: ${msg.selectedSectors.join(', ')}`;
+                }
+                if (msg.selectedETFs?.length) {
+                  text += `\n선택된 ETF: ${msg.selectedETFs.join(', ')}`;
+                }
+                if (msg.currentStep) {
+                  text += `\n현재 단계: ${msg.currentStep}`;
+                }
+                return text;
+              })
+              .join('\n');
+            return `=== ${context} ===\n${messages}`;
           })
-          .join('\n');
-        return `=== ${context} ===\n${messages}`;
-      })
-      .join('\n\n');
+          .join('\n\n')
+      ),
+      // 메타데이터 생성
+      Promise.resolve().then(() => ({
+        sessionCount: Object.keys(sessions).length,
+        contexts: Object.keys(sessions),
+        sectors: Object.values(sessions)
+          .flatMap((session: any) => 
+            session.messages
+              .flatMap((msg: any) => msg.selectedSectors || [])
+          )
+          .filter((sector, index, self) => self.indexOf(sector) === index),
+        etfs: Object.values(sessions)
+          .flatMap((session: any) => 
+            session.messages
+              .flatMap((msg: any) => msg.selectedETFs || [])
+          )
+          .filter((etf, index, self) => self.indexOf(etf) === index),
+      }))
+    ]);
 
     const formattedPrompt = await reportPrompt.format({
       sessions: sessionsText,
@@ -91,20 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         date: now.toISOString(),
         metadata: {
           createdAt: now.toISOString(),
-          sessionCount: Object.keys(sessions).length,
-          contexts: Object.keys(sessions),
-          sectors: Object.values(sessions)
-            .flatMap((session: any) => 
-              session.messages
-                .flatMap((msg: any) => msg.selectedSectors || [])
-            )
-            .filter((sector, index, self) => self.indexOf(sector) === index),
-          etfs: Object.values(sessions)
-            .flatMap((session: any) => 
-              session.messages
-                .flatMap((msg: any) => msg.selectedETFs || [])
-            )
-            .filter((etf, index, self) => self.indexOf(etf) === index),
+          ...metadata
         }
       };
 

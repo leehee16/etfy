@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Book, TrendingUp, Search, BarChartIcon as ChartBar, FileText } from 'lucide-react';
+import { Book, TrendingUp, Search, BarChartIcon as ChartBar, FileText, Loader2 } from 'lucide-react';
 import RightPanel from './RightPanel';
 import { Reference } from '@/types/chat';
 import { ChatMessages } from './ChatMessages';
@@ -1215,6 +1215,7 @@ const MainContent: React.FC<MainContentProps> = ({ isSidebarOpen, activeSession,
                     sectorRanks={sectorRanks}
                     myETFs={myETFs}
                     onSectorCheck={handleSectorCheck}
+                    isGeneratingReport={isGeneratingReport}
                   />
                 </div>
               </div>

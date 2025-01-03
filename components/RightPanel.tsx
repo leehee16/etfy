@@ -4,7 +4,7 @@ import FadeIn from './FadeIn';
 import Image from 'next/image';
 import InvestmentProgress from './InvestmentProgress';
 import { Checkbox } from './Checkbox';
-import { Book, TrendingUp, Search, BarChartIcon as ChartBar, FileText } from 'lucide-react';
+import { Book, TrendingUp, Search, BarChartIcon as ChartBar, Download, Loader2 } from 'lucide-react';
 
 interface SubTask {
   id: string;
@@ -65,6 +65,7 @@ interface RightPanelProps {
   sectorRanks: SectorRank[];
   myETFs: MyETF[];
   onSectorCheck: (sectorId: string, checked: boolean) => void;
+  isGeneratingReport?: boolean;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ 
@@ -82,7 +83,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
   sessionMessages,
   sectorRanks,
   myETFs,
-  onSectorCheck
+  onSectorCheck,
+  isGeneratingReport = false
 }) => {
   const [userName, setUserName] = useState('');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
@@ -227,10 +229,17 @@ const RightPanel: React.FC<RightPanelProps> = ({
           </nav>
           <button
             onClick={handleGenerateReport}
-            className="generate-report-button w-full p-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-gray-400 hover:text-gray-300 hover:bg-[#2f2f2f]/50"
+            disabled={isGeneratingReport}
+            className="generate-report-button w-full p-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-gray-400 hover:text-gray-300 hover:bg-[#2f2f2f]/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FileText size={16} className="text-purple-300" />
-            <span className="text-xs font-medium">보고서 생성</span>
+            {isGeneratingReport ? (
+              <Loader2 size={16} className="text-purple-300 animate-spin" />
+            ) : (
+              <Download size={16} className="text-purple-300" />
+            )}
+            <span className="text-xs font-medium">
+              {isGeneratingReport ? '보고서 생성 중...' : '보고서 생성'}
+            </span>
             {Object.values(sessionMessages).some(messages => messages.length > 0) && (
               <div className="flex items-center justify-center w-4 h-4 rounded-full bg-purple-300/20 text-purple-300 text-xs">
                 {Object.values(sessionMessages).reduce((sum, messages) => sum + messages.length, 0)}

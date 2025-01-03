@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, Loader2 } from 'lucide-react';
 import { useArchiveStore } from '@/lib/store/archiveStore';
+import { pdf } from '@react-pdf/renderer';
+import ReportPDF from './ReportPDF';
 
 interface Report {
   id: string;
@@ -24,6 +26,7 @@ interface ArchiveProps {
 const Archive: React.FC<ArchiveProps> = ({ userId, reports, onReportClick }) => {
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev =>
@@ -118,6 +121,28 @@ const Archive: React.FC<ArchiveProps> = ({ userId, reports, onReportClick }) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  const handlePDFDownload = async (report: Report) => {
+    try {
+      setIsDownloading(report.id);
+      const content = JSON.parse(report.content);
+      const pdfDoc = <ReportPDF content={content} title={report.title} />;
+      const blob = await pdf(pdfDoc).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PDF 생성 중 오류:', error);
+      alert('PDF 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsDownloading(null);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
@@ -140,23 +165,17 @@ const Archive: React.FC<ArchiveProps> = ({ userId, reports, onReportClick }) => 
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const content = JSON.parse(report.content);
-                        const blob = new Blob(
-                          [JSON.stringify(content, null, 2)],
-                          { type: 'application/json' }
-                        );
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${report.title}.json`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
+                        handlePDFDownload(report);
                       }}
-                      className="p-2 text-gray-400 hover:text-gray-300"
+                      className="p-2 text-gray-400 hover:text-gray-300 disabled:opacity-50"
+                      title="PDF 다운로드"
+                      disabled={isDownloading === report.id}
                     >
-                      <Download size={16} />
+                      {isDownloading === report.id ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Download size={16} />
+                      )}
                     </button>
                     <button
                       onClick={(e) => {
@@ -167,6 +186,7 @@ const Archive: React.FC<ArchiveProps> = ({ userId, reports, onReportClick }) => 
                         }
                       }}
                       className="p-2 text-gray-400 hover:text-red-400"
+                      title="삭제"
                     >
                       <Trash2 size={16} />
                     </button>

@@ -89,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         contentStr = response.content
           .map(item => {
             if (typeof item === 'string') return item;
-            if ('text' in item) return item.text;
+            if (typeof item === 'object' && item !== null && 'text' in item) return item.text;
             return '';
           })
           .join('');
@@ -99,6 +99,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         } else {
           contentStr = JSON.stringify(response.content);
         }
+      }
+
+      // JSON 문자열 정리
+      contentStr = contentStr.trim();
+      if (contentStr.startsWith('```json')) {
+        contentStr = contentStr.replace(/```json\n?/, '').replace(/```$/, '');
+      }
+      if (contentStr.startsWith('{') && contentStr.endsWith('}')) {
+        contentStr = contentStr.trim();
       }
 
       console.log('Processed content:', contentStr);
@@ -121,6 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
     } catch (parseError) {
       console.error('JSON 파싱 오류:', parseError);
+      console.error('파싱 시도한 문자열:', contentStr);
       return res.status(500).json({ error: 'JSON 파싱 오류가 발생했습니다.' });
     }
   } catch (error) {

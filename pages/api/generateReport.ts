@@ -13,7 +13,7 @@ function generateId() {
 }
 
 const model = new ChatOpenAI({
-  modelName: 'o1-preview'
+  modelName: 'gpt-4o'
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -77,12 +77,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const response = await model.invoke(formattedPrompt);
 
+    // 디버깅을 위한 로깅 추가
+    console.log('Raw response:', response);
+    console.log('Response type:', typeof response.content);
+    
+    let contentStr = '';
     try {
-      // 디버깅을 위한 로깅 추가
-      console.log('Raw response:', response);
-      console.log('Response type:', typeof response.content);
-      
-      let contentStr = '';
       if (typeof response.content === 'string') {
         contentStr = response.content;
       } else if (Array.isArray(response.content)) {
@@ -135,6 +135,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     console.error('리포트 생성 중 오류:', error);
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
     return res.status(500).json({ error: '리포트 생성 중 오류가 발생했습니다.' });
   }
 } 
